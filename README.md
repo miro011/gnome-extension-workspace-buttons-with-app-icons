@@ -2,6 +2,8 @@
 
 Removes the original workspaces (activities) indicator and replaces it with buttons. Within each button are the icons of the windows opened in that workspace. It also moves the clock to the right to free up space if needed.
 
+![Preview](preview.png)
+
 ## Features
 
 - **App Icons Ordering**
