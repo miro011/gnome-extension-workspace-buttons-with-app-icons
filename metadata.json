@@ -1,0 +1,10 @@
+{
+    "uuid": "workspace-buttons-with-app-icons@miro",
+    "name": "Workspace Buttons With App Icons",
+    "description": "Replaces the original workspace indicator with numbers and app icons.",
+    "version": 1,
+    "settings-schema": "org.gnome.shell.extensions.workspace-buttons-with-app-icons",
+    "shell-version": ["45", "46", "47"],
+    "url": "https://github.com/yourusername/workspace-indicator"
+}
+

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="gnome-shell-extensions">
+  <schema path="/org/gnome/shell/extensions/workspace-buttons-with-app-icons/" id="org.gnome.shell.extensions.workspace-buttons-with-app-icons">
+    <key type="i" name="app-icon-size">
+      <default>30</default>
+      <summary>The size of each icon (pixels)</summary>
+      <description></description>
+    </key>
+    <key type="i" name="workspace-number-font-size">
+      <default>22</default>
+      <summary>The size of the workspace number (pixels)</summary>
+      <description></description>
+    </key>
+    <key type="s" name="active-workspace-color">
+      <default>"#c64600"</default>
+      <summary>The color of the active workspace</summary>
+      <description></description>
+    </key>
+  </schema>
+</schemalist>
