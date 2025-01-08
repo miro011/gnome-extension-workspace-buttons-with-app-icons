@@ -12,6 +12,9 @@ Removes the original workspaces (activities) indicator and replaces it with butt
 
 - **Scroll (anywhere within the container):**
   - Switch workspace (up = left / down = right).
+  
+- **Middle Click:**
+  - Open overview for that workspace.
 
 - **Left Click:**
   - Switch to whichever workspace was clicked.

@@ -8,31 +8,21 @@ import Clutter from "gi://Clutter";
 
 export default class WorkspaceIndicatorExtension extends Extension {
     enable() {
+        // HIDE ACTIVITIES AND MOVE DATE MENU TO THE RIGHT
         Main.panel.statusArea['activities']?.hide();
-        // Check if the date menu is in the center box
-        if (Main.panel.statusArea.dateMenu) {
-            let dateMenu = Main.panel.statusArea.dateMenu;
-            // Remove from center box
+        let dateMenu = Main.panel.statusArea.dateMenu;
+        if (dateMenu) {
             Main.panel._centerBox.remove_child(dateMenu.container);
-            // Add to right box as the last element
             Main.panel._rightBox.add_child(dateMenu.container);
         }
     
+        // INSTANCE VARIABLES
         this.settings = this.getSettings();
         this.focusHistory = [];
         this.container = new St.BoxLayout({style_class: "extension-wrapper", vertical: false, reactive: true, track_hover: true});
-        Main.panel._leftBox.insert_child_at_index(this.container, 0); // append
+        Main.panel._leftBox.insert_child_at_index(this.container, 0);
 
-        this.container.connect("scroll-event", (actor, event) => {
-            let scrollDirection = event.get_scroll_direction();
-            let activeWsIndex = global.workspace_manager.get_active_workspace_index();
-
-            if (scrollDirection === Clutter.ScrollDirection.UP && activeWsIndex > 0)
-                global.workspace_manager.get_workspace_by_index(activeWsIndex - 1).activate(global.get_current_time());
-            else if (scrollDirection === Clutter.ScrollDirection.DOWN && activeWsIndex < global.workspace_manager.get_n_workspaces() - 1)
-                global.workspace_manager.get_workspace_by_index(activeWsIndex + 1).activate(global.get_current_time());
-        });
-
+        // POPULATE CONTAINER AND FOCUS HISTORY
         for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
             this.add_empty_ws(wsIndex);
             let iconsWrapperElem = this.container.get_children()[wsIndex].get_children()[1];
@@ -45,23 +35,22 @@ export default class WorkspaceIndicatorExtension extends Extension {
             }
         }
         this.mark_active_workspace();
-        
-        this._workspaceRemovedId = global.workspace_manager.connect("workspace-added", (wm, index) => this.add_empty_ws(index));
-        this._workspaceAddedId = global.workspace_manager.connect("workspace-removed", (wm, index) => this.rm_ws(index));
-        this._workspaceChangedId = global.workspace_manager.connect("active-workspace-changed", () => this.mark_active_workspace()); // workspace change
-        this._restackedId = global.display.connect("restacked", () => this.sync());
-        this._focusChangedId = global.display.connect("notify::focus-window", () => {
-            let newlyFocusedWindowObj = global.display.focus_window;
-            if (newlyFocusedWindowObj) {
-                let newlyFocusedWindowId = newlyFocusedWindowObj.get_id();
-                let wsIndex = newlyFocusedWindowObj.get_workspace().index();
-                if (this.focusHistory[wsIndex].includes(newlyFocusedWindowId))
-                    this.move_existing_window_to_front(wsIndex, newlyFocusedWindowId);
-            }
+
+
+        // EVENTS
+
+        // Container
+        this.container.connect("scroll-event", (actor, event) => {
+            let scrollDirection = event.get_scroll_direction();
+            let activeWsIndex = global.workspace_manager.get_active_workspace_index();
+
+            if (scrollDirection === Clutter.ScrollDirection.UP && activeWsIndex > 0)
+                global.workspace_manager.get_workspace_by_index(activeWsIndex - 1).activate(global.get_current_time());
+            else if (scrollDirection === Clutter.ScrollDirection.DOWN && activeWsIndex < global.workspace_manager.get_n_workspaces() - 1)
+                global.workspace_manager.get_workspace_by_index(activeWsIndex + 1).activate(global.get_current_time());
         });
-        this._workspaceReordered = global.workspace_manager.connect("workspaces-reordered", () => this.reorder_wss());
 
-
+        // Settings changes
         this._settingsAppIconChangedId = this.settings.connect('changed::app-icon-size', () => {
             for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
                 let actualWindowsArr = global.workspace_manager.get_workspace_by_index(wsIndex).list_windows();
@@ -79,7 +68,6 @@ export default class WorkspaceIndicatorExtension extends Extension {
                 }
             }
         });
-
         this._settingsWorkspaceNumberFontSizeChangedId = this.settings.connect('changed::workspace-number-font-size', () => {
             for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
                 let wsNumWrapper = this.container.get_children()[wsIndex].get_children()[0];
@@ -90,24 +78,81 @@ export default class WorkspaceIndicatorExtension extends Extension {
         this._settingsActiveWorkspaceColorChangedId = this.settings.connect('changed::active-workspace-color', () => {
             this.mark_active_workspace();
         });
+
+        // Gnome
+
+        this._workspaceAddedId = global.workspace_manager.connect("workspace-added", (wm, index) => this.add_empty_ws(index));
+        this._workspaceRemovedId = global.workspace_manager.connect("workspace-removed", (wm, index) => this.rm_ws(index));
+        this._workspaceChangedId = global.workspace_manager.connect("active-workspace-changed", () => this.mark_active_workspace());
+        this._workspaceReordered = global.workspace_manager.connect("workspaces-reordered", () => this.reorder_wss());
+        this._restackedId = global.display.connect("restacked", () => this.sync());
+        this._focusChangedId = global.display.connect("notify::focus-window", () => {
+            let newlyFocusedWindowObj = global.display.focus_window;
+            if (newlyFocusedWindowObj) {
+                let newlyFocusedWindowId = newlyFocusedWindowObj.get_id();
+                let wsIndex = newlyFocusedWindowObj.get_workspace().index();
+                if (this.focusHistory[wsIndex].includes(newlyFocusedWindowId))
+                    this.move_existing_window_to_front(wsIndex, newlyFocusedWindowId);
+            }
+        });        
     }
     
     disable() {
-        global.workspace_manager.disconnect(this._workspaceReordered);
-        global.workspace_manager.disconnect(this._workspaceRemovedId);
-        global.workspace_manager.disconnect(this._workspaceAddedId);
-        global.workspace_manager.disconnect(this._workspaceChangedId);
-        global.display.disconnect(this._restackedId);
-        global.display.disconnect(this._focusChangedId);
-        this.container.destroy();
-        this.container = null;
+        // Remove GNOME-based events
+        if (this._workspaceAddedId) {
+            global.workspace_manager.disconnect(this._workspaceAddedId);
+            this._workspaceAddedId = null;
+        }
+        if (this._workspaceRemovedId) {
+            global.workspace_manager.disconnect(this._workspaceRemovedId);
+            this._workspaceRemovedId = null;
+        }
+        if (this._workspaceChangedId) {
+            global.workspace_manager.disconnect(this._workspaceChangedId);
+            this._workspaceChangedId = null;
+        }
+        if (this._workspaceReordered) {
+            global.workspace_manager.disconnect(this._workspaceReordered);
+            this._workspaceReordered = null;
+        }
+        if (this._restackedId) {
+            global.display.disconnect(this._restackedId);
+            this._restackedId = null;
+        }
+        if (this._focusChangedId) {
+            global.display.disconnect(this._focusChangedId);
+            this._focusChangedId = null;
+        }
+    
+        // Disconnect settings signals
+        if (this._settingsAppIconChangedId) {
+            this.settings.disconnect(this._settingsAppIconChangedId);
+            this._settingsAppIconChangedId = null;
+        }
+        if (this._settingsWorkspaceNumberFontSizeChangedId) {
+            this.settings.disconnect(this._settingsWorkspaceNumberFontSizeChangedId);
+            this._settingsWorkspaceNumberFontSizeChangedId = null;
+        }
+        if (this._settingsActiveWorkspaceColorChangedId) {
+            this.settings.disconnect(this._settingsActiveWorkspaceColorChangedId);
+            this._settingsActiveWorkspaceColorChangedId = null;
+        }
+    
+        // Destroy instance variables and UI components
+        if (this.container) {
+            this.container.destroy();
+            this.container = null;
+        }
         this.focusHistory = null;
+    
+        // Nullify settings object
+        this.settings = null;
+    
+        // Unhide activities and move date menu back to center
         Main.panel.statusArea['activities']?.show();
-        if (Main.panel.statusArea.dateMenu) {
-            let dateMenu = Main.panel.statusArea.dateMenu;
-            // Remove from right box
+        let dateMenu = Main.panel.statusArea.dateMenu;
+        if (dateMenu) {
             Main.panel._rightBox.remove_child(dateMenu.container);
-            // Add back to center box
             Main.panel._centerBox.insert_child_at_index(dateMenu.container, -1);
         }
     }
