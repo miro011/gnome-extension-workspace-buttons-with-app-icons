@@ -1,20 +1,64 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="gnome-shell-extensions">
   <schema path="/org/gnome/shell/extensions/workspace-buttons-with-app-icons/" id="org.gnome.shell.extensions.workspace-buttons-with-app-icons">
-    <key type="i" name="app-icon-size">
-      <default>30</default>
-      <summary>The size of each icon (pixels)</summary>
-      <description></description>
+    <key type="i" name="workspace-button-spacing">
+        <default>10</default>
+        <summary>The spacing between the workspace buttons (pixels)</summary>
+        <description></description>
     </key>
     <key type="i" name="workspace-number-font-size">
       <default>22</default>
       <summary>The size of the workspace number (pixels)</summary>
       <description></description>
     </key>
+    <key type="i" name="app-icon-size">
+      <default>30</default>
+      <summary>The size of each icon (pixels)</summary>
+      <description></description>
+    </key>
+    <key type="i" name="app-icon-spacing">
+      <default>0</default>
+      <summary>The spacing between the icons in each workspace button (pixels)</summary>
+      <description></description>
+    </key>
+    <key type="s" name="workspace-button-background-color">
+      <default>"#3c3c3c"</default>
+      <summary>The color of the active workspace</summary>
+      <description></description>
+    </key>
     <key type="s" name="active-workspace-color">
       <default>"#c64600"</default>
       <summary>The color of the active workspace</summary>
       <description></description>
+    </key>
+    <key type="s" name="inactive-workspace-color">
+      <default>"#5a5a5a"</default>
+      <summary>The color of the active workspace</summary>
+      <description></description>
+    </key>
+    <key type="b" name="container-scroll-to-switch-workspace">
+      <default>true</default>
+      <summary>Enable scrolling on the container to switch workspaces.</summary>
+      <description>
+        If other extensions allow scrolling anywhere on the panel to switch workspaces, enabling this can result in double inputs (one scroll equals two switches). 
+        This option exists to prevent such conflicts by allowing you to toggle this behavior.
+      </description>
+    </key>
+    <key type="b" name="middle-click-ignores-clicked-workspace">
+      <default>false</default>
+      <summary>Middle click always opens overview for the current workspace.</summary>
+      <description>
+        By default, when you middle click on another workspace, it will first switch to it and then open overview, for whichever workspace was selected.
+        This makes it so that until you manually switch to another workspace, middle clicking anywhere in the container opens overview for the current workspace.
+      </description>
+    </key>
+    <key type="b" name="right-click-ignores-clicked-workspace">
+      <default>false</default>
+      <summary>Right click always opens window switcher for the current workspace.</summary>
+      <description>
+        By default, when you right click on another workspace, it will first switch to it and then open the window switcher, for whichever workspace was selected.
+        This makes it so that until you manually switch to another workspace, right clicking anywhere in the container opens the window switcher for the current workspace.
+      </description>
     </key>
   </schema>
 </schemalist>

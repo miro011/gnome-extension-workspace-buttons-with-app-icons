@@ -40,7 +40,10 @@ export default class WorkspaceIndicatorExtension extends Extension {
         // EVENTS
 
         // Container
-        this.container.connect("scroll-event", (actor, event) => {
+        this._containerScrollEventId = this.container.connect("scroll-event", (actor, event) => {
+            if (!this.settings.get_boolean("container-scroll-to-switch-workspace")) {
+                return;
+            }
             let scrollDirection = event.get_scroll_direction();
             let activeWsIndex = global.workspace_manager.get_active_workspace_index();
 
@@ -49,9 +52,36 @@ export default class WorkspaceIndicatorExtension extends Extension {
             else if (scrollDirection === Clutter.ScrollDirection.DOWN && activeWsIndex < global.workspace_manager.get_n_workspaces() - 1)
                 global.workspace_manager.get_workspace_by_index(activeWsIndex + 1).activate(global.get_current_time());
         });
+        this._containerClickEventId = this.container.connect("button-press-event", (actor, event) => {
+            let btnPressed = event.get_button();
+        
+            if (btnPressed === Clutter.BUTTON_SECONDARY && this.settings.get_boolean("right-click-ignores-clicked-workspace")) {
+                let activeWsIndex = global.workspace_manager.get_active_workspace_index();
+                if (this.focusHistory[activeWsIndex].length > 0) {
+                    this.show_custom_right_click_window_switcher();
+                }
+            }
+            else if (btnPressed === Clutter.BUTTON_MIDDLE && this.settings.get_boolean("middle-click-ignores-clicked-workspace")) {
+                Main.overview.toggle();
+            }
+        });        
 
         // Settings changes
-        this._settingsAppIconChangedId = this.settings.connect('changed::app-icon-size', () => {
+        this._settingsWorkspaceButtonSpacingChangedId = this.settings.connect('changed::workspace-button-spacing', () => {
+            for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
+                let singleWsWrapperElem = this.container.get_children()[wsIndex];
+                let oldStyle = singleWsWrapperElem.get_style();
+                let newStyle = oldStyle.replace(/margin-right:[^;]+;/g, `margin-right: ${this.settings.get_int("workspace-button-spacing")}px;`);
+                singleWsWrapperElem.set_style(newStyle);
+            }
+        });
+        this._settingsWorkspaceNumberFontSizeChangedId = this.settings.connect('changed::workspace-number-font-size', () => {
+            for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
+                let wsNumWrapper = this.container.get_children()[wsIndex].get_children()[0];
+                wsNumWrapper.get_children()[0].set_style(`font-size: ${this.settings.get_int("workspace-number-font-size")}px;`);
+            }
+        });
+        this._settingsAppIconSizeChangedId = this.settings.connect('changed::app-icon-size', () => {
             for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
                 let actualWindowsArr = global.workspace_manager.get_workspace_by_index(wsIndex).list_windows();
                 let iconsWrapperElem = this.container.get_children()[wsIndex].get_children()[1];
@@ -68,14 +98,25 @@ export default class WorkspaceIndicatorExtension extends Extension {
                 }
             }
         });
-        this._settingsWorkspaceNumberFontSizeChangedId = this.settings.connect('changed::workspace-number-font-size', () => {
+        this._settingsAppIconSpacingChangedId = this.settings.connect('changed::app-icon-spacing', () => {
             for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
-                let wsNumWrapper = this.container.get_children()[wsIndex].get_children()[0];
-                wsNumWrapper.get_children()[0].set_style(`font-size: ${this.settings.get_int("workspace-number-font-size")}px`);
+                for (let appIconWrapperElem of this.container.get_children()[wsIndex].get_children()[1].get_children()) {
+                    appIconWrapperElem.set_style(`margin-right: ${this.settings.get_int("app-icon-spacing")}px;`);
+                } 
             }
         });
-
+        this._settingsWorkspaceButtonBackgroundColorChangedId = this.settings.connect('changed::workspace-button-background-color', () => {
+            for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
+                let singleWsWrapperElem = this.container.get_children()[wsIndex];
+                let oldStyle = singleWsWrapperElem.get_style();
+                let newStyle = oldStyle.replace(/background-color:[^;]+;/g, `background-color: ${this.settings.get_string('workspace-button-background-color')};`);
+                singleWsWrapperElem.set_style(newStyle);
+            }
+        });
         this._settingsActiveWorkspaceColorChangedId = this.settings.connect('changed::active-workspace-color', () => {
+            this.mark_active_workspace();
+        });
+        this._settingsInactiveWorkspaceColorChangedId = this.settings.connect('changed::inactive-workspace-color', () => {
             this.mark_active_workspace();
         });
 
@@ -125,19 +166,35 @@ export default class WorkspaceIndicatorExtension extends Extension {
         }
     
         // Disconnect settings signals
-        if (this._settingsAppIconChangedId) {
-            this.settings.disconnect(this._settingsAppIconChangedId);
-            this._settingsAppIconChangedId = null;
+        if (this._settingsWorkspaceButtonSpacingChangedId) {
+            this.settings.disconnect(this._settingsWorkspaceButtonSpacingChangedId);
+            this._settingsWorkspaceButtonSpacingChangedId = null;
         }
         if (this._settingsWorkspaceNumberFontSizeChangedId) {
             this.settings.disconnect(this._settingsWorkspaceNumberFontSizeChangedId);
             this._settingsWorkspaceNumberFontSizeChangedId = null;
         }
+        if (this._settingsAppIconSizeChangedId) {
+            this.settings.disconnect(this._settingsAppIconSizeChangedId);
+            this._settingsAppIconSizeChangedId = null;
+        }
+        if (this._settingsAppIconSpacingChangedId) {
+            this.settings.disconnect(this._settingsAppIconSpacingChangedId);
+            this._settingsAppIconSpacingChangedId = null;
+        }
+        if (this._settingsWorkspaceButtonBackgroundColorChangedId) {
+            this.settings.disconnect(this._settingsWorkspaceButtonBackgroundColorChangedId);
+            this._settingsWorkspaceButtonBackgroundColorChangedId = null;
+        }
         if (this._settingsActiveWorkspaceColorChangedId) {
             this.settings.disconnect(this._settingsActiveWorkspaceColorChangedId);
             this._settingsActiveWorkspaceColorChangedId = null;
         }
-    
+        if (this._settingsInactiveWorkspaceColorChangedId) {
+            this.settings.disconnect(this._settingsInactiveWorkspaceColorChangedId);
+            this._settingsInactiveWorkspaceColorChangedId = null;
+        }
+
         // Destroy instance variables and UI components
         if (this.container) {
             this.container.destroy();
@@ -203,13 +260,14 @@ export default class WorkspaceIndicatorExtension extends Extension {
         this.focusHistory.push([]);
     
         let singleWsWrapperElem = new St.BoxLayout({ style_class: "single-ws-wrapper", reactive: true });
+        singleWsWrapperElem.set_style(`margin-right: ${this.settings.get_int("workspace-button-spacing")}px; background-color: ${this.settings.get_string('workspace-button-background-color')};`);
         singleWsWrapperElem.wsIndex = wsIndex; // property for each access to handle events and such
     
         // Workspace number (visual)
         let wsNumWrapper = new St.BoxLayout({ style_class: "ws-num-wrapper" });
         wsNumWrapper.add_child(new St.Label({ text: `${wsIndex + 1}`, style_class: "ws-num", y_align: Clutter.ActorAlign.CENTER }));
         wsNumWrapper.set_style(`background-color:#5a5a5a;`);
-        wsNumWrapper.get_children()[0].set_style(`font-size: ${this.settings.get_int("workspace-number-font-size")}px`);
+        wsNumWrapper.get_children()[0].set_style(`font-size: ${this.settings.get_int("workspace-number-font-size")}px;`);
         singleWsWrapperElem.add_child(wsNumWrapper);
     
         let iconsWrapper = new St.BoxLayout({ style_class: "ws-icons-wrapper" });
@@ -225,31 +283,14 @@ export default class WorkspaceIndicatorExtension extends Extension {
             if (btnPressed === Clutter.BUTTON_PRIMARY) {
                 global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
             }
-            else if (btnPressed === Clutter.BUTTON_SECONDARY) {
+            else if (btnPressed === Clutter.BUTTON_SECONDARY && !this.settings.get_boolean("right-click-ignores-clicked-workspace")) {
                 global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
     
                 if (this.focusHistory[actor.wsIndex].length > 0) {
-                    let windowSwitcher = new AltTab.WindowSwitcherPopup();
-                    windowSwitcher._resetNoModsTimeout = () => {}; // Disable the timeout
-    
-                    // Override the destroy method to handle manual closure
-                    let originalDestroy = windowSwitcher.destroy.bind(windowSwitcher);
-                    windowSwitcher.destroy = () => {
-                        // Get the currently highlighted window
-                        if (windowSwitcher._items[windowSwitcher._selectedIndex]) {
-                            let selectedWindow = windowSwitcher._items[windowSwitcher._selectedIndex].window;
-                            selectedWindow.get_compositor_private().grab_key_focus(); // this must be run - otherwise the keyboard focus remains on the previous window and things get screwed up
-                            selectedWindow.activate(global.get_current_time());
-                        }
-    
-                        // Call the original destroy
-                        originalDestroy();
-                    };
-    
-                    windowSwitcher.show(0, 0, 0);
+                    this.show_custom_right_click_window_switcher();
                 }
             }
-            else if (btnPressed === Clutter.BUTTON_MIDDLE) {
+            else if (btnPressed === Clutter.BUTTON_MIDDLE && !this.settings.get_boolean("middle-click-ignores-clicked-workspace")) {
                 global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
                 Main.overview.toggle();
             }
@@ -322,7 +363,7 @@ export default class WorkspaceIndicatorExtension extends Extension {
 
     mark_active_workspace() {
         for (let wsElem of this.container.get_children()) {
-            wsElem.get_children()[0].set_style(`background-color:#5a5a5a;`);
+            wsElem.get_children()[0].set_style(`background-color: ${this.settings.get_string('inactive-workspace-color')};`);
         }
     
         // Apply user-defined color to the active workspace
@@ -336,6 +377,7 @@ export default class WorkspaceIndicatorExtension extends Extension {
         let appObj = Shell.WindowTracker.get_default().get_window_app(windowObj);
         if (appObj) {
             let appIconWrapperElem = new St.BoxLayout({ style_class: "app-icon-wrapper" });
+            appIconWrapperElem.set_style(`margin-right: ${this.settings.get_int("app-icon-spacing")}px;`);
             appIconWrapperElem.windowId = windowObj.get_id();
             appIconWrapperElem.add_child(appObj.create_icon_texture(this.settings.get_int('app-icon-size')));
             return appIconWrapperElem;
@@ -351,5 +393,26 @@ export default class WorkspaceIndicatorExtension extends Extension {
             if (!setB.has(elem)) return false;
         }
         return true;
+    }
+
+    show_custom_right_click_window_switcher() {
+        let windowSwitcher = new AltTab.WindowSwitcherPopup();
+        windowSwitcher._resetNoModsTimeout = () => {}; // Disable the timeout
+    
+        // Override the destroy method to handle manual closure
+        let originalDestroy = windowSwitcher.destroy.bind(windowSwitcher);
+        windowSwitcher.destroy = () => {
+            // Get the currently highlighted window
+            if (windowSwitcher._items[windowSwitcher._selectedIndex]) {
+                let selectedWindow = windowSwitcher._items[windowSwitcher._selectedIndex].window;
+                selectedWindow.get_compositor_private().grab_key_focus(); // this must be run - otherwise the keyboard focus remains on the previous window and things get screwed up
+                selectedWindow.activate(global.get_current_time());
+            }
+    
+            // Call the original destroy
+            originalDestroy();
+        };
+    
+        windowSwitcher.show(0, 0, 0);
     }
 }
