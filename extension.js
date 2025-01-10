@@ -69,7 +69,10 @@ export default class WorkspaceIndicatorExtension extends Extension {
         // Settings changes
         this._settingsWorkspaceButtonSpacingChangedId = this.settings.connect('changed::workspace-button-spacing', () => {
             for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
-                this.container.get_children()[wsIndex].set_style(`margin-right: ${this.settings.get_int("workspace-button-spacing")}px;`);
+                let singleWsWrapperElem = this.container.get_children()[wsIndex];
+                let oldStyle = singleWsWrapperElem.get_style();
+                let newStyle = oldStyle.replace(/margin-right:[^;]+;/g, `margin-right: ${this.settings.get_int("workspace-button-spacing")}px;`);
+                singleWsWrapperElem.set_style(newStyle);
             }
         });
         this._settingsWorkspaceNumberFontSizeChangedId = this.settings.connect('changed::workspace-number-font-size', () => {
@@ -95,7 +98,18 @@ export default class WorkspaceIndicatorExtension extends Extension {
                 }
             }
         });
+        this._settingsWorkspaceButtonBackgroundColorChangedId = this.settings.connect('changed::workspace-button-background-color', () => {
+            for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
+                let singleWsWrapperElem = this.container.get_children()[wsIndex];
+                let oldStyle = singleWsWrapperElem.get_style();
+                let newStyle = oldStyle.replace(/background-color:[^;]+;/g, `background-color: ${this.settings.get_string('workspace-button-background-color')};`);
+                singleWsWrapperElem.set_style(newStyle);
+            }
+        });
         this._settingsActiveWorkspaceColorChangedId = this.settings.connect('changed::active-workspace-color', () => {
+            this.mark_active_workspace();
+        });
+        this._settingsInactiveWorkspaceColorChangedId = this.settings.connect('changed::inactive-workspace-color', () => {
             this.mark_active_workspace();
         });
 
@@ -157,9 +171,17 @@ export default class WorkspaceIndicatorExtension extends Extension {
             this.settings.disconnect(this._settingsAppIconSizeChangedId);
             this._settingsAppIconSizeChangedId = null;
         }
+        if (this._settingsWorkspaceButtonBackgroundColorChangedId) {
+            this.settings.disconnect(this._settingsWorkspaceButtonBackgroundColorChangedId);
+            this._settingsWorkspaceButtonBackgroundColorChangedId = null;
+        }
         if (this._settingsActiveWorkspaceColorChangedId) {
             this.settings.disconnect(this._settingsActiveWorkspaceColorChangedId);
             this._settingsActiveWorkspaceColorChangedId = null;
+        }
+        if (this._settingsInactiveWorkspaceColorChangedId) {
+            this.settings.disconnect(this._settingsInactiveWorkspaceColorChangedId);
+            this._settingsInactiveWorkspaceColorChangedId = null;
         }
 
         // Destroy instance variables and UI components
@@ -227,7 +249,7 @@ export default class WorkspaceIndicatorExtension extends Extension {
         this.focusHistory.push([]);
     
         let singleWsWrapperElem = new St.BoxLayout({ style_class: "single-ws-wrapper", reactive: true });
-        singleWsWrapperElem.set_style(`margin-right: ${this.settings.get_int("workspace-button-spacing")}px;`);
+        singleWsWrapperElem.set_style(`margin-right: ${this.settings.get_int("workspace-button-spacing")}px; background-color: ${this.settings.get_string('workspace-button-background-color')};`);
         singleWsWrapperElem.wsIndex = wsIndex; // property for each access to handle events and such
     
         // Workspace number (visual)
@@ -330,7 +352,7 @@ export default class WorkspaceIndicatorExtension extends Extension {
 
     mark_active_workspace() {
         for (let wsElem of this.container.get_children()) {
-            wsElem.get_children()[0].set_style(`background-color:#5a5a5a;`);
+            wsElem.get_children()[0].set_style(`background-color: ${this.settings.get_string('inactive-workspace-color')};`);
         }
     
         // Apply user-defined color to the active workspace

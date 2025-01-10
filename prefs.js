@@ -19,7 +19,9 @@ export default class Prefs extends ExtensionPreferences {
             this.get_int_spin_row('workspace-button-spacing', 'Workspace Button Spacing', 'Set the spacing (right margin) between the workspace buttons (0px to 50px)', 0, 50),
             this.get_int_spin_row('workspace-number-font-size', 'Workspace Number Font Size', 'Set the font size of the workspace numbers (10px to 96px)', 10, 96),
             this.get_int_spin_row('app-icon-size', 'Icon Size', 'Set the size of the app icons (10px to 96px)', 10, 96),
-            this.get_color_picker_row('active-workspace-color', 'Active Workspace Color', 'Set the color of the active workspace')
+            this.get_color_picker_row('workspace-button-background-color', 'Workspace Button Background Color', 'Set the color that surrounds the entire workspace button in the background'),
+            this.get_color_picker_row('active-workspace-color', 'Active Workspace Color', 'Set the color of the active workspace'),
+            this.get_color_picker_row('inactive-workspace-color', 'Inactive Workspace Color', 'Set the color of inactive workspace/s')
         ];
         for (let row of rowsArr) {
             appearanceGroup.add(row);
@@ -82,6 +84,7 @@ export default class Prefs extends ExtensionPreferences {
 
         let colorButton = new Gtk.ColorButton({
             rgba: this.get_rgba_color_from_hex(this.settings.get_string(dconfKey)),
+            valign: Gtk.Align.CENTER, // Center vertically within the row
         });
 
         // colorButton.set_tooltip_text(_('blah.'));
