@@ -40,7 +40,31 @@ export default class WorkspaceIndicatorExtension extends Extension {
         // EVENTS
 
         // Container
-        this.set_container_scroll_event(this.settings.get_boolean('container-scroll-to-switch-workspace'));
+        this._containerScrollEventId = this.container.connect("scroll-event", (actor, event) => {
+            if (!this.settings.get_boolean("container-scroll-to-switch-workspace")) {
+                return;
+            }
+            let scrollDirection = event.get_scroll_direction();
+            let activeWsIndex = global.workspace_manager.get_active_workspace_index();
+
+            if (scrollDirection === Clutter.ScrollDirection.UP && activeWsIndex > 0)
+                global.workspace_manager.get_workspace_by_index(activeWsIndex - 1).activate(global.get_current_time());
+            else if (scrollDirection === Clutter.ScrollDirection.DOWN && activeWsIndex < global.workspace_manager.get_n_workspaces() - 1)
+                global.workspace_manager.get_workspace_by_index(activeWsIndex + 1).activate(global.get_current_time());
+        });
+        this._containerClickEventId = this.container.connect("button-press-event", (actor, event) => {
+            let btnPressed = event.get_button();
+        
+            if (btnPressed === Clutter.BUTTON_SECONDARY && this.settings.get_boolean("right-click-ignores-clicked-workspace")) {
+                let activeWsIndex = global.workspace_manager.get_active_workspace_index();
+                if (this.focusHistory[activeWsIndex].length > 0) {
+                    this.show_custom_right_click_window_switcher();
+                }
+            }
+            else if (btnPressed === Clutter.BUTTON_MIDDLE && this.settings.get_boolean("middle-click-ignores-clicked-workspace")) {
+                Main.overview.toggle();
+            }
+        });        
 
         // Settings changes
         this._settingsWorkspaceButtonSpacingChangedId = this.settings.connect('changed::workspace-button-spacing', () => {
@@ -73,9 +97,6 @@ export default class WorkspaceIndicatorExtension extends Extension {
         });
         this._settingsActiveWorkspaceColorChangedId = this.settings.connect('changed::active-workspace-color', () => {
             this.mark_active_workspace();
-        });
-        this._settingsContainerScrollToSwitchWorkspaceChangedId = this.settings.connect('changed::container-scroll-to-switch-workspace', () => {
-            this.set_container_scroll_event(this.settings.get_boolean('container-scroll-to-switch-workspace'));
         });
 
         // Gnome
@@ -140,11 +161,7 @@ export default class WorkspaceIndicatorExtension extends Extension {
             this.settings.disconnect(this._settingsActiveWorkspaceColorChangedId);
             this._settingsActiveWorkspaceColorChangedId = null;
         }
-        if (this._settingsContainerScrollToSwitchWorkspaceChangedId) {
-            this.settings.disconnect(this._settingsContainerScrollToSwitchWorkspaceChangedId);
-            this._settingsContainerScrollToSwitchWorkspaceChangedId = null;
-        }
-    
+
         // Destroy instance variables and UI components
         if (this.container) {
             this.container.destroy();
@@ -233,31 +250,14 @@ export default class WorkspaceIndicatorExtension extends Extension {
             if (btnPressed === Clutter.BUTTON_PRIMARY) {
                 global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
             }
-            else if (btnPressed === Clutter.BUTTON_SECONDARY) {
+            else if (btnPressed === Clutter.BUTTON_SECONDARY && !this.settings.get_boolean("right-click-ignores-clicked-workspace")) {
                 global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
     
                 if (this.focusHistory[actor.wsIndex].length > 0) {
-                    let windowSwitcher = new AltTab.WindowSwitcherPopup();
-                    windowSwitcher._resetNoModsTimeout = () => {}; // Disable the timeout
-    
-                    // Override the destroy method to handle manual closure
-                    let originalDestroy = windowSwitcher.destroy.bind(windowSwitcher);
-                    windowSwitcher.destroy = () => {
-                        // Get the currently highlighted window
-                        if (windowSwitcher._items[windowSwitcher._selectedIndex]) {
-                            let selectedWindow = windowSwitcher._items[windowSwitcher._selectedIndex].window;
-                            selectedWindow.get_compositor_private().grab_key_focus(); // this must be run - otherwise the keyboard focus remains on the previous window and things get screwed up
-                            selectedWindow.activate(global.get_current_time());
-                        }
-    
-                        // Call the original destroy
-                        originalDestroy();
-                    };
-    
-                    windowSwitcher.show(0, 0, 0);
+                    this.show_custom_right_click_window_switcher();
                 }
             }
-            else if (btnPressed === Clutter.BUTTON_MIDDLE) {
+            else if (btnPressed === Clutter.BUTTON_MIDDLE && !this.settings.get_boolean("middle-click-ignores-clicked-workspace")) {
                 global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
                 Main.overview.toggle();
             }
@@ -361,21 +361,24 @@ export default class WorkspaceIndicatorExtension extends Extension {
         return true;
     }
 
-    set_container_scroll_event(state) {
-        if (state === true) {
-            this._containerScrollEventId = this.container.connect("scroll-event", (actor, event) => {
-                let scrollDirection = event.get_scroll_direction();
-                let activeWsIndex = global.workspace_manager.get_active_workspace_index();
+    show_custom_right_click_window_switcher() {
+        let windowSwitcher = new AltTab.WindowSwitcherPopup();
+        windowSwitcher._resetNoModsTimeout = () => {}; // Disable the timeout
     
-                if (scrollDirection === Clutter.ScrollDirection.UP && activeWsIndex > 0)
-                    global.workspace_manager.get_workspace_by_index(activeWsIndex - 1).activate(global.get_current_time());
-                else if (scrollDirection === Clutter.ScrollDirection.DOWN && activeWsIndex < global.workspace_manager.get_n_workspaces() - 1)
-                    global.workspace_manager.get_workspace_by_index(activeWsIndex + 1).activate(global.get_current_time());
-            });
-        }
-        else if (state === false) {
-            if (this._containerScrollEventId !== null) this.container.disconnect(this._containerScrollEventId);
-            this._containerScrollEventId = null;
-        }
+        // Override the destroy method to handle manual closure
+        let originalDestroy = windowSwitcher.destroy.bind(windowSwitcher);
+        windowSwitcher.destroy = () => {
+            // Get the currently highlighted window
+            if (windowSwitcher._items[windowSwitcher._selectedIndex]) {
+                let selectedWindow = windowSwitcher._items[windowSwitcher._selectedIndex].window;
+                selectedWindow.get_compositor_private().grab_key_focus(); // this must be run - otherwise the keyboard focus remains on the previous window and things get screwed up
+                selectedWindow.activate(global.get_current_time());
+            }
+    
+            // Call the original destroy
+            originalDestroy();
+        };
+    
+        windowSwitcher.show(0, 0, 0);
     }
 }

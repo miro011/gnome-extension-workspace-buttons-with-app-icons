@@ -29,5 +29,21 @@
         This option exists to prevent such conflicts by allowing you to toggle this behavior.
       </description>
     </key>
+    <key type="b" name="middle-click-ignores-clicked-workspace">
+      <default>false</default>
+      <summary>Middle click always opens overview for the current workspace.</summary>
+      <description>
+        By default, when you middle click on another workspace, it will first switch to it and then open overview, for whichever workspace was selected.
+        This makes it so that until you manually switch to another workspace, middle clicking anywhere in the container opens overview for the current workspace.
+      </description>
+    </key>
+    <key type="b" name="right-click-ignores-clicked-workspace">
+      <default>false</default>
+      <summary>Right click always opens window switcher for the current workspace.</summary>
+      <description>
+        By default, when you right click on another workspace, it will first switch to it and then open the window switcher, for whichever workspace was selected.
+        This makes it so that until you manually switch to another workspace, right clicking anywhere in the container opens the window switcher for the current workspace.
+      </description>
+    </key>
   </schema>
 </schemalist>
