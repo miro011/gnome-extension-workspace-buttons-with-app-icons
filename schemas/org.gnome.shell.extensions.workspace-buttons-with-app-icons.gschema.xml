@@ -1,20 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="gnome-shell-extensions">
   <schema path="/org/gnome/shell/extensions/workspace-buttons-with-app-icons/" id="org.gnome.shell.extensions.workspace-buttons-with-app-icons">
-    <key type="i" name="app-icon-size">
-      <default>30</default>
-      <summary>The size of each icon (pixels)</summary>
-      <description></description>
+    <key type="i" name="workspace-button-spacing">
+        <default>10</default>
+        <summary>The spacing between the workspace buttons (pixels)</summary>
+        <description></description>
     </key>
     <key type="i" name="workspace-number-font-size">
       <default>22</default>
       <summary>The size of the workspace number (pixels)</summary>
       <description></description>
     </key>
+    <key type="i" name="app-icon-size">
+      <default>30</default>
+      <summary>The size of each icon (pixels)</summary>
+      <description></description>
+    </key>
     <key type="s" name="active-workspace-color">
       <default>"#c64600"</default>
       <summary>The color of the active workspace</summary>
       <description></description>
+    </key>
+    <key type="b" name="container-scroll-to-switch-workspace">
+      <default>true</default>
+      <summary>Enable scrolling on the container to switch workspaces.</summary>
+      <description>
+        If other extensions allow scrolling anywhere on the panel to switch workspaces, enabling this can result in double inputs (one scroll equals two switches). 
+        This option exists to prevent such conflicts by allowing you to toggle this behavior.
+      </description>
     </key>
   </schema>
 </schemalist>

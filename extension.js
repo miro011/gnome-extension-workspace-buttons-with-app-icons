@@ -40,18 +40,21 @@ export default class WorkspaceIndicatorExtension extends Extension {
         // EVENTS
 
         // Container
-        this.container.connect("scroll-event", (actor, event) => {
-            let scrollDirection = event.get_scroll_direction();
-            let activeWsIndex = global.workspace_manager.get_active_workspace_index();
-
-            if (scrollDirection === Clutter.ScrollDirection.UP && activeWsIndex > 0)
-                global.workspace_manager.get_workspace_by_index(activeWsIndex - 1).activate(global.get_current_time());
-            else if (scrollDirection === Clutter.ScrollDirection.DOWN && activeWsIndex < global.workspace_manager.get_n_workspaces() - 1)
-                global.workspace_manager.get_workspace_by_index(activeWsIndex + 1).activate(global.get_current_time());
-        });
+        this.set_container_scroll_event(this.settings.get_boolean('container-scroll-to-switch-workspace'));
 
         // Settings changes
-        this._settingsAppIconChangedId = this.settings.connect('changed::app-icon-size', () => {
+        this._settingsWorkspaceButtonSpacingChangedId = this.settings.connect('changed::workspace-button-spacing', () => {
+            for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
+                this.container.get_children()[wsIndex].set_style(`margin-right: ${this.settings.get_int("workspace-button-spacing")}px;`);
+            }
+        });
+        this._settingsWorkspaceNumberFontSizeChangedId = this.settings.connect('changed::workspace-number-font-size', () => {
+            for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
+                let wsNumWrapper = this.container.get_children()[wsIndex].get_children()[0];
+                wsNumWrapper.get_children()[0].set_style(`font-size: ${this.settings.get_int("workspace-number-font-size")}px;`);
+            }
+        });
+        this._settingsAppIconSizeChangedId = this.settings.connect('changed::app-icon-size', () => {
             for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
                 let actualWindowsArr = global.workspace_manager.get_workspace_by_index(wsIndex).list_windows();
                 let iconsWrapperElem = this.container.get_children()[wsIndex].get_children()[1];
@@ -68,15 +71,11 @@ export default class WorkspaceIndicatorExtension extends Extension {
                 }
             }
         });
-        this._settingsWorkspaceNumberFontSizeChangedId = this.settings.connect('changed::workspace-number-font-size', () => {
-            for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
-                let wsNumWrapper = this.container.get_children()[wsIndex].get_children()[0];
-                wsNumWrapper.get_children()[0].set_style(`font-size: ${this.settings.get_int("workspace-number-font-size")}px`);
-            }
-        });
-
         this._settingsActiveWorkspaceColorChangedId = this.settings.connect('changed::active-workspace-color', () => {
             this.mark_active_workspace();
+        });
+        this._settingsContainerScrollToSwitchWorkspaceChangedId = this.settings.connect('changed::container-scroll-to-switch-workspace', () => {
+            this.set_container_scroll_event(this.settings.get_boolean('container-scroll-to-switch-workspace'));
         });
 
         // Gnome
@@ -125,17 +124,25 @@ export default class WorkspaceIndicatorExtension extends Extension {
         }
     
         // Disconnect settings signals
-        if (this._settingsAppIconChangedId) {
-            this.settings.disconnect(this._settingsAppIconChangedId);
-            this._settingsAppIconChangedId = null;
+        if (this._settingsWorkspaceButtonSpacingChangedId) {
+            this.settings.disconnect(this._settingsWorkspaceButtonSpacingChangedId);
+            this._settingsWorkspaceButtonSpacingChangedId = null;
         }
         if (this._settingsWorkspaceNumberFontSizeChangedId) {
             this.settings.disconnect(this._settingsWorkspaceNumberFontSizeChangedId);
             this._settingsWorkspaceNumberFontSizeChangedId = null;
         }
+        if (this._settingsAppIconSizeChangedId) {
+            this.settings.disconnect(this._settingsAppIconSizeChangedId);
+            this._settingsAppIconSizeChangedId = null;
+        }
         if (this._settingsActiveWorkspaceColorChangedId) {
             this.settings.disconnect(this._settingsActiveWorkspaceColorChangedId);
             this._settingsActiveWorkspaceColorChangedId = null;
+        }
+        if (this._settingsContainerScrollToSwitchWorkspaceChangedId) {
+            this.settings.disconnect(this._settingsContainerScrollToSwitchWorkspaceChangedId);
+            this._settingsContainerScrollToSwitchWorkspaceChangedId = null;
         }
     
         // Destroy instance variables and UI components
@@ -203,13 +210,14 @@ export default class WorkspaceIndicatorExtension extends Extension {
         this.focusHistory.push([]);
     
         let singleWsWrapperElem = new St.BoxLayout({ style_class: "single-ws-wrapper", reactive: true });
+        singleWsWrapperElem.set_style(`margin-right: ${this.settings.get_int("workspace-button-spacing")}px;`);
         singleWsWrapperElem.wsIndex = wsIndex; // property for each access to handle events and such
     
         // Workspace number (visual)
         let wsNumWrapper = new St.BoxLayout({ style_class: "ws-num-wrapper" });
         wsNumWrapper.add_child(new St.Label({ text: `${wsIndex + 1}`, style_class: "ws-num", y_align: Clutter.ActorAlign.CENTER }));
         wsNumWrapper.set_style(`background-color:#5a5a5a;`);
-        wsNumWrapper.get_children()[0].set_style(`font-size: ${this.settings.get_int("workspace-number-font-size")}px`);
+        wsNumWrapper.get_children()[0].set_style(`font-size: ${this.settings.get_int("workspace-number-font-size")}px;`);
         singleWsWrapperElem.add_child(wsNumWrapper);
     
         let iconsWrapper = new St.BoxLayout({ style_class: "ws-icons-wrapper" });
@@ -351,5 +359,23 @@ export default class WorkspaceIndicatorExtension extends Extension {
             if (!setB.has(elem)) return false;
         }
         return true;
+    }
+
+    set_container_scroll_event(state) {
+        if (state === true) {
+            this._containerScrollEventId = this.container.connect("scroll-event", (actor, event) => {
+                let scrollDirection = event.get_scroll_direction();
+                let activeWsIndex = global.workspace_manager.get_active_workspace_index();
+    
+                if (scrollDirection === Clutter.ScrollDirection.UP && activeWsIndex > 0)
+                    global.workspace_manager.get_workspace_by_index(activeWsIndex - 1).activate(global.get_current_time());
+                else if (scrollDirection === Clutter.ScrollDirection.DOWN && activeWsIndex < global.workspace_manager.get_n_workspaces() - 1)
+                    global.workspace_manager.get_workspace_by_index(activeWsIndex + 1).activate(global.get_current_time());
+            });
+        }
+        else if (state === false) {
+            if (this._containerScrollEventId !== null) this.container.disconnect(this._containerScrollEventId);
+            this._containerScrollEventId = null;
+        }
     }
 }
