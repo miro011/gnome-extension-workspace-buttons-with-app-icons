@@ -7,7 +7,6 @@ import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/
 export default class Prefs extends ExtensionPreferences {
 
     fillPreferencesWindow(window) {
-        this.settings = this.getSettings();
         let rowsArr;
 
         // Create Preferences Page
@@ -62,11 +61,11 @@ export default class Prefs extends ExtensionPreferences {
                 step_increment: increment,
             }),
             valign: Gtk.Align.CENTER, // Center vertically within the row
-            value: this.settings.get_int(dconfKey),
+            value: this.getSettings().get_int(dconfKey),
         });
     
         spinBtn.connect('value-changed', sb => {
-            this.settings.set_int(dconfKey, sb.get_value_as_int());
+            this.getSettings().set_int(dconfKey, sb.get_value_as_int());
         });
     
         // Add reset button
@@ -76,8 +75,8 @@ export default class Prefs extends ExtensionPreferences {
             valign: Gtk.Align.CENTER,
         });
         resetButton.connect('clicked', () => {
-            const defaultValue = this.settings.get_default_value(dconfKey).deep_unpack();
-            this.settings.set_int(dconfKey, defaultValue);
+            const defaultValue = this.getSettings().get_default_value(dconfKey).deep_unpack();
+            this.getSettings().set_int(dconfKey, defaultValue);
             spinBtn.set_value(defaultValue);
         });
     
@@ -95,13 +94,13 @@ export default class Prefs extends ExtensionPreferences {
         });
     
         let colorButton = new Gtk.ColorButton({
-            rgba: this.get_rgba_color_from_hex(this.settings.get_string(dconfKey)),
+            rgba: this.get_rgba_color_from_hex(this.getSettings().get_string(dconfKey)),
             valign: Gtk.Align.CENTER, // Center vertically within the row
         });
     
         colorButton.connect('color-set', cb => {
             const rgba = cb.get_rgba();
-            this.settings.set_string(dconfKey, this.get_hex_color_from_rgba(rgba));
+            this.getSettings().set_string(dconfKey, this.get_hex_color_from_rgba(rgba));
         });
     
         // Add reset button
@@ -111,8 +110,8 @@ export default class Prefs extends ExtensionPreferences {
             valign: Gtk.Align.CENTER,
         });
         resetButton.connect('clicked', () => {
-            const defaultValue = this.settings.get_default_value(dconfKey).deep_unpack();
-            this.settings.set_string(dconfKey, defaultValue);
+            const defaultValue = this.getSettings().get_default_value(dconfKey).deep_unpack();
+            this.getSettings().set_string(dconfKey, defaultValue);
             colorButton.set_rgba(this.get_rgba_color_from_hex(defaultValue));
         });
     
@@ -144,12 +143,12 @@ export default class Prefs extends ExtensionPreferences {
         });
     
         let toggle = new Gtk.Switch({
-            active: this.settings.get_boolean(dconfKey),
+            active: this.getSettings().get_boolean(dconfKey),
             valign: Gtk.Align.CENTER, // Center vertically within the row
         });
     
         toggle.connect('state-set', (tg, state) => {
-            this.settings.set_boolean(dconfKey, state);
+            this.getSettings().set_boolean(dconfKey, state);
         });
     
         // Add reset button
@@ -159,8 +158,8 @@ export default class Prefs extends ExtensionPreferences {
             valign: Gtk.Align.CENTER,
         });
         resetButton.connect('clicked', () => {
-            const defaultValue = this.settings.get_default_value(dconfKey).deep_unpack();
-            this.settings.set_boolean(dconfKey, defaultValue);
+            const defaultValue = this.getSettings().get_default_value(dconfKey).deep_unpack();
+            this.getSettings().set_boolean(dconfKey, defaultValue);
             toggle.set_active(defaultValue);
         });
     
