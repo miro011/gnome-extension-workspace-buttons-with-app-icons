@@ -16,6 +16,11 @@
       <summary>The size of each icon (pixels)</summary>
       <description></description>
     </key>
+    <key type="i" name="app-icon-spacing">
+      <default>0</default>
+      <summary>The spacing between the icons in each workspace button (pixels)</summary>
+      <description></description>
+    </key>
     <key type="s" name="workspace-button-background-color">
       <default>"#3c3c3c"</default>
       <summary>The color of the active workspace</summary>

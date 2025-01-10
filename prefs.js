@@ -19,6 +19,7 @@ export default class Prefs extends ExtensionPreferences {
             this.get_int_spin_row('workspace-button-spacing', 'Workspace Button Spacing', 'Set the spacing (right margin) between the workspace buttons (0px to 50px)', 0, 50),
             this.get_int_spin_row('workspace-number-font-size', 'Workspace Number Font Size', 'Set the font size of the workspace numbers (10px to 96px)', 10, 96),
             this.get_int_spin_row('app-icon-size', 'Icon Size', 'Set the size of the app icons (10px to 96px)', 10, 96),
+            this.get_int_spin_row('app-icon-spacing', 'Icon Spacing', 'Set the spacing (right margin) between the icons shown in each workspace (0px to 96px)', 0, 50),
             this.get_color_picker_row('workspace-button-background-color', 'Workspace Button Background Color', 'Set the color that surrounds the entire workspace button in the background'),
             this.get_color_picker_row('active-workspace-color', 'Active Workspace Color', 'Set the color of the active workspace'),
             this.get_color_picker_row('inactive-workspace-color', 'Inactive Workspace Color', 'Set the color of inactive workspace/s')
@@ -48,12 +49,12 @@ export default class Prefs extends ExtensionPreferences {
         window.set_resizable(true);
     }
 
-    get_int_spin_row(dconfKey, title, subtitle, min, max, increment=1) {
+    get_int_spin_row(dconfKey, title, subtitle, min, max, increment = 1) {
         let row = new Adw.ActionRow({
             title: _(title),
             subtitle: _(subtitle),
         });
-
+    
         let spinBtn = new Gtk.SpinButton({
             adjustment: new Gtk.Adjustment({
                 lower: min,
@@ -63,42 +64,65 @@ export default class Prefs extends ExtensionPreferences {
             valign: Gtk.Align.CENTER, // Center vertically within the row
             value: this.settings.get_int(dconfKey),
         });
-
-        // spinBtn.set_tooltip_text(_('blah.'));
-
+    
         spinBtn.connect('value-changed', sb => {
             this.settings.set_int(dconfKey, sb.get_value_as_int());
         });
-
+    
+        // Add reset button
+        let resetButton = new Gtk.Button({
+            icon_name: 'view-refresh-symbolic', // Refresh icon
+            tooltip_text: _('Reset to default'),
+            valign: Gtk.Align.CENTER,
+        });
+        resetButton.connect('clicked', () => {
+            const defaultValue = this.settings.get_default_value(dconfKey).deep_unpack();
+            this.settings.set_int(dconfKey, defaultValue);
+            spinBtn.set_value(defaultValue);
+        });
+    
         row.add_suffix(spinBtn);
+        row.add_suffix(resetButton);
         row.activatable_widget = spinBtn;
-
+    
         return row;
-    }
+    }    
 
     get_color_picker_row(dconfKey, title, subtitle) {
         let row = new Adw.ActionRow({
             title: _(title),
             subtitle: _(subtitle),
         });
-
+    
         let colorButton = new Gtk.ColorButton({
             rgba: this.get_rgba_color_from_hex(this.settings.get_string(dconfKey)),
             valign: Gtk.Align.CENTER, // Center vertically within the row
         });
-
-        // colorButton.set_tooltip_text(_('blah.'));
-
+    
         colorButton.connect('color-set', cb => {
             const rgba = cb.get_rgba();
             this.settings.set_string(dconfKey, this.get_hex_color_from_rgba(rgba));
         });
-
+    
+        // Add reset button
+        let resetButton = new Gtk.Button({
+            icon_name: 'view-refresh-symbolic', // Refresh icon
+            tooltip_text: _('Reset to default'),
+            valign: Gtk.Align.CENTER,
+        });
+        resetButton.connect('clicked', () => {
+            const defaultValue = this.settings.get_default_value(dconfKey).deep_unpack();
+            this.settings.set_string(dconfKey, defaultValue);
+            colorButton.set_rgba(this.get_rgba_color_from_hex(defaultValue));
+        });
+    
         row.add_suffix(colorButton);
+        row.add_suffix(resetButton);
         row.activatable_widget = colorButton;
-
+    
         return row;
     }
+    
     // Helper: Parse a hex color string to a Gdk.RGBA object
     get_rgba_color_from_hex(hex) {
         const rgba = new Gdk.RGBA();
@@ -119,23 +143,31 @@ export default class Prefs extends ExtensionPreferences {
             subtitle: _(subtitle),
         });
     
-        // Create the toggle switch
         let toggle = new Gtk.Switch({
             active: this.settings.get_boolean(dconfKey),
             valign: Gtk.Align.CENTER, // Center vertically within the row
         });
-
-        // toggle.set_tooltip_text(_('blah.'));
     
-        // Connect the 'state-set' signal to update the setting
         toggle.connect('state-set', (tg, state) => {
-            this.settings.set_boolean(dconfKey, state); // Save the new state to settings
+            this.settings.set_boolean(dconfKey, state);
+        });
+    
+        // Add reset button
+        let resetButton = new Gtk.Button({
+            icon_name: 'view-refresh-symbolic', // Refresh icon
+            tooltip_text: _('Reset to default'),
+            valign: Gtk.Align.CENTER,
+        });
+        resetButton.connect('clicked', () => {
+            const defaultValue = this.settings.get_default_value(dconfKey).deep_unpack();
+            this.settings.set_boolean(dconfKey, defaultValue);
+            toggle.set_active(defaultValue);
         });
     
         row.add_suffix(toggle);
+        row.add_suffix(resetButton);
         row.activatable_widget = toggle;
     
         return row;
-    }
-    
+    }    
 }

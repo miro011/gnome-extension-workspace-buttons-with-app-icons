@@ -98,6 +98,13 @@ export default class WorkspaceIndicatorExtension extends Extension {
                 }
             }
         });
+        this._settingsAppIconSpacingChangedId = this.settings.connect('changed::app-icon-spacing', () => {
+            for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
+                for (let appIconWrapperElem of this.container.get_children()[wsIndex].get_children()[1].get_children()) {
+                    appIconWrapperElem.set_style(`margin-right: ${this.settings.get_int("app-icon-spacing")}px;`);
+                } 
+            }
+        });
         this._settingsWorkspaceButtonBackgroundColorChangedId = this.settings.connect('changed::workspace-button-background-color', () => {
             for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
                 let singleWsWrapperElem = this.container.get_children()[wsIndex];
@@ -170,6 +177,10 @@ export default class WorkspaceIndicatorExtension extends Extension {
         if (this._settingsAppIconSizeChangedId) {
             this.settings.disconnect(this._settingsAppIconSizeChangedId);
             this._settingsAppIconSizeChangedId = null;
+        }
+        if (this._settingsAppIconSpacingChangedId) {
+            this.settings.disconnect(this._settingsAppIconSpacingChangedId);
+            this._settingsAppIconSpacingChangedId = null;
         }
         if (this._settingsWorkspaceButtonBackgroundColorChangedId) {
             this.settings.disconnect(this._settingsWorkspaceButtonBackgroundColorChangedId);
@@ -366,6 +377,7 @@ export default class WorkspaceIndicatorExtension extends Extension {
         let appObj = Shell.WindowTracker.get_default().get_window_app(windowObj);
         if (appObj) {
             let appIconWrapperElem = new St.BoxLayout({ style_class: "app-icon-wrapper" });
+            appIconWrapperElem.set_style(`margin-right: ${this.settings.get_int("app-icon-spacing")}px;`);
             appIconWrapperElem.windowId = windowObj.get_id();
             appIconWrapperElem.add_child(appObj.create_icon_texture(this.settings.get_int('app-icon-size')));
             return appIconWrapperElem;
