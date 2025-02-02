@@ -17,6 +17,8 @@ export default class Prefs extends ExtensionPreferences {
         let appearanceGroup = new Adw.PreferencesGroup({title: _('Appearance Settings'),});
         rowsArr = [
             this.get_int_spin_row(settings, 'wsb-button-spacing', 'Workspace Button Spacing', 'Set the spacing (right margin) between the workspace buttons', 0, 50),
+            this.get_int_spin_row(settings, 'wsb-button-padding', 'Workspace Button Padding', 'Set the spacing inside the workspace buttons - aka padding', 0, 50),
+            this.get_int_spin_row(settings, 'wsb-button-roundness', 'Workspace Button Roundness', 'Set how round the should buttons be - aka border radius', 0, 50),
             this.get_toggle_row(settings, 'wsb-show-workspace-number', 'Show Workspace Numbers', 'You can hide the numbers to save some space'),
             this.get_int_spin_row(settings, 'wsb-number-font-size', 'Workspace Number Font Size', 'Set the font size of the workspace numbers', 5, 100),
             this.get_int_spin_row(settings, 'wsb-icon-size', 'Icon Size', 'Set the size of the app icons', 5, 100),

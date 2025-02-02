@@ -143,6 +143,16 @@ export default class Renderer {
         });
         this.extSettings.add_event_id(id);
 
+        id = this.extSettingsRealTimeObj.connect('changed::wsb-button-padding', () => {
+            this.workspaceButtons.update_button_padding();
+        });
+        this.extSettings.add_event_id(id);
+
+        id = this.extSettingsRealTimeObj.connect('changed::wsb-button-roundness', () => {
+            this.workspaceButtons.update_button_roundness();
+        });
+        this.extSettings.add_event_id(id);
+
         id = this.extSettingsRealTimeObj.connect('changed::wsb-show-workspace-number', () => {
             this.workspaceButtons.toggle_workspace_numbers();
         });
@@ -156,13 +166,13 @@ export default class Renderer {
         id = this.extSettingsRealTimeObj.connect('changed::wsb-icon-size', () => {
             for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
                 let windowsPerMonitorArr = this._get_ws_windows_by_monitor(wsIndex);
-                this.workspaceButtons.update_app_icon_size(wsIndex, windowsPerMonitorArr);
+                this.workspaceButtons.update_icon_size(wsIndex, windowsPerMonitorArr);
             }
         });
         this.extSettings.add_event_id(id);
 
         id = this.extSettingsRealTimeObj.connect('changed::wsb-icon-spacing', () => {
-            this.workspaceButtons.update_app_icon_spacing();
+            this.workspaceButtons.update_icon_spacing();
         });
         this.extSettings.add_event_id(id);
 
@@ -272,8 +282,6 @@ export default class Renderer {
                 this.winIdsContRepr[newMonitorIndex][newWsIndex].unshift(windowId);
             }
         }));
-
-        //global.workspace_manager.connect('workspaces-changed', () => {}) : fires whenever workspaces change including when windows are moved between them, which is what you will use it for exclusively
 
         this.gnomeEventIdsObj["display"].push(global.display.connect("notify::focus-window", () => {
             // we're only concenred about focus changes on the same monitor-workspace combo (this event triggers for other things too - when window is opened, or closd - or basically any time focus is changed)
@@ -386,12 +394,4 @@ export default class Renderer {
         log("workspaceButtons.debug_get_container_representation_array()");
         log(this.workspaceButtons.debug_get_container_representation_array());
     }
-
-    /*
-    _add_monitor_changed_event_to_window(windowObj) {
-        windowObj.connect('notify::monitor', () => {
-            //
-        });
-    }
-    */
 }

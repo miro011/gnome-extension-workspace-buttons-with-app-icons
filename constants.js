@@ -1,5 +1,7 @@
 export const extensionSettingsInfoObj = {
     "wsb-button-spacing": "i",
+    "wsb-button-padding": "i",
+    "wsb-button-roundness": "i",
     "wsb-show-workspace-number": "b",
     "wsb-number-font-size": "i",
     "wsb-icon-size": "i",

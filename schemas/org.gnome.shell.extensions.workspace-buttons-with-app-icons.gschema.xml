@@ -6,6 +6,16 @@
         <summary>The spacing between the workspace buttons (pixels)</summary>
         <description></description>
     </key>
+    <key type="i" name="wsb-button-padding">
+        <default>3</default>
+        <summary>The spacing inside the workspace buttons - aka padding - (pixels)</summary>
+        <description></description>
+    </key>
+    <key type="i" name="wsb-button-roundness">
+        <default>5</default>
+        <summary>How round should the buttons be - aka border radius - (pixels)</summary>
+        <description></description>
+    </key>
     <key type="b" name="wsb-show-workspace-number">
       <default>false</default>
       <summary>Whether to show the workspace number all the time</summary>
