@@ -19,19 +19,19 @@ export default class Renderer {
         this.mutterSettings = new Settings(this.mutterSettingsRealTimeObj, constants.mutterSettingsInfoObj);
 
         this.topbars = new Topbars();
-        this.workspaceButtons = new WorkspaceButtons(this.extSettings, this.winIdsContRepr);
+        this.workspaceButtons = new WorkspaceButtons(this.extSettingsRealTimeObj, this.extSettings, this.winIdsContRepr);
 
         this.numMonitors = null;
         this.wsOnlyOnPrimary = null;
         this.mainMonitorIndex = null;
 
         this.gnomeEventIdsObj = {"display": [], "workspace_manager": []};
+        // holds the monitors changed event - which is crucial - whenever monitors change we need to reset and re-populate
+        // as operations below rely on the hardcoded monitor config established during population
+        this.layoutManagerEventId;
         
         this._initial_population();
         this._enable_settings_events();
-        this.layoutManagerEventId = Main.layoutManager.connect('monitors-changed', () => {
-            this._initial_population();
-        });
         this._enable_gnome_events();
     }
 
@@ -125,6 +125,9 @@ export default class Renderer {
     }
 
     _enable_settings_events() {
+        // just like monitors changed, there are hardcoded values, established during intial population that rely on workspaces-only-on-primary and dynamic workspaces
+        // not only that but the way the processing in this class works is one step at a time - for ex:
+        // if we don't reload when dynamic workspaces is toggled, all of a sudden you have potentially multiple new workspaces and everything will be way off
         let id;
 
         id = this.mutterSettingsRealTimeObj.connect('changed::workspaces-only-on-primary', () => {
@@ -136,68 +139,13 @@ export default class Renderer {
             this._initial_population();
         });
         this.mutterSettings.add_event_id(id);
-
-
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-button-spacing', () => {
-            this.workspaceButtons.update_button_spacing();
-        });
-        this.extSettings.add_event_id(id);
-
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-button-padding', () => {
-            this.workspaceButtons.update_button_padding();
-        });
-        this.extSettings.add_event_id(id);
-
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-button-roundness', () => {
-            this.workspaceButtons.update_button_roundness();
-        });
-        this.extSettings.add_event_id(id);
-
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-show-workspace-number', () => {
-            this.workspaceButtons.toggle_workspace_numbers();
-        });
-        this.extSettings.add_event_id(id);
-
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-number-font-size', () => {
-            this.workspaceButtons.update_ws_num_number_font_size();
-        });
-        this.extSettings.add_event_id(id);
-
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-icon-size', () => {
-            for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
-                let windowsPerMonitorArr = this._get_ws_windows_by_monitor(wsIndex);
-                this.workspaceButtons.update_icon_size(wsIndex, windowsPerMonitorArr);
-            }
-        });
-        this.extSettings.add_event_id(id);
-
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-icon-spacing', () => {
-            this.workspaceButtons.update_icon_spacing();
-        });
-        this.extSettings.add_event_id(id);
-
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-active-button-background-color', () => {
-            this.workspaceButtons.update_active_workspace();
-        });
-        this.extSettings.add_event_id(id);
-
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-inactive-button-background-color', () => {
-            this.workspaceButtons.update_active_workspace();
-        });
-        this.extSettings.add_event_id(id);
-
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-active-workspace-number-background-color', () => {
-            this.workspaceButtons.update_active_workspace();
-        });
-        this.extSettings.add_event_id(id);
-
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-inactive-workspace-number-background-color', () => {
-            this.workspaceButtons.update_active_workspace();
-        });
-        this.extSettings.add_event_id(id);
     }
 
     _enable_gnome_events() {
+        this.layoutManagerEventId = Main.layoutManager.connect('monitors-changed', () => {
+            this._initial_population();
+        });
+
         this.gnomeEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("active-workspace-changed", () => {
             this.workspaceButtons.update_active_workspace();
         }));
@@ -235,13 +183,11 @@ export default class Renderer {
             this.workspaceButtons.update_active_workspace();
         }));
         
-        /*
         this.gnomeEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspaces-reordered", () => {
-            //
-        }));*/
+            log("workspaces-reordered");
+        }));
 
         this.gnomeEventIdsObj["display"].push(global.display.connect('window-created', (display, windowObj) => {
-            //log(`New window with id ${windowObj.get_id()} created on workspace ${windowObj.get_workspace().index()} of monitor ${windowObj.get_monitor()}`);
             if (windowObj.get_window_type() !== Meta.WindowType.NORMAL) return;
             //log("window created");
 
@@ -256,6 +202,9 @@ export default class Renderer {
             this.workspaceButtons.add_window_icon("l", windowObj, monitorIndex, wsIndex);
         }));
 
+        // a window leaves a monitor if it's a/ closed or b/ moved to another monitor
+        // when moved to another monitor, it is possible to also be moved to another workspace, but we don't care about that - we just move it to the monitor
+        // the window added to workspace event is seperate and triggers seperate which then moves it to the right workspace if the window did in fact move to another workspace
         this.gnomeEventIdsObj["display"].push(global.display.connect('window-left-monitor', (display, oldMonitorIndex, windowObj) => {
             if (windowObj.get_window_type() !== Meta.WindowType.NORMAL) return;
 
@@ -267,13 +216,11 @@ export default class Renderer {
             let oldWindowIndex = this.winIdsContRepr[oldMonitorIndex][oldWsIndex].indexOf(windowId);
 
             if (newMonitorIndex < 0) {
-                // window closed
                 //log("window closed");
                 this.workspaceButtons.remove_window_icon(oldMonitorIndex, oldWsIndex, oldWindowIndex);
                 this.winIdsContRepr[oldMonitorIndex][oldWsIndex].splice(oldWindowIndex, 1);
             }
             else {
-                // moved to another monitor
                 //log("window moved to another monitor");
                 let newWsIndex = (this.wsOnlyOnPrimary && newMonitorIndex !== this.mainMonitorIndex) ? 0 : oldWsIndex;
                 let newWindowIndex = 0;
@@ -283,10 +230,11 @@ export default class Renderer {
             }
         }));
 
+        // here, we're only concenred about focus changes on existing windows on the same monitor-workspace combo
+        // (this event triggers for other things too - when window is opened, or closed - or basically any time focus is changed - all of which is handled exclusively)
         this.gnomeEventIdsObj["display"].push(global.display.connect("notify::focus-window", () => {
-            // we're only concenred about focus changes on the same monitor-workspace combo (this event triggers for other things too - when window is opened, or closd - or basically any time focus is changed)
             let newlyFocusedWindowObj = global.display.focus_window;
-            if (!newlyFocusedWindowObj) return; // if last window is closed event will fire but there will be no focused window
+            if (!newlyFocusedWindowObj) return; // if last window in a workspace (empty workspace) is closed event will fire but there will be no focused window
 
             let winIdsMeta = this._get_winIdsMeta();
             
