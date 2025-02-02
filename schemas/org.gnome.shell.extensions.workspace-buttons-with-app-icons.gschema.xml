@@ -1,42 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="gnome-shell-extensions">
   <schema path="/org/gnome/shell/extensions/workspace-buttons-with-app-icons/" id="org.gnome.shell.extensions.workspace-buttons-with-app-icons">
-    <key type="i" name="workspace-button-spacing">
+    <key type="i" name="wsb-button-spacing">
         <default>10</default>
         <summary>The spacing between the workspace buttons (pixels)</summary>
         <description></description>
     </key>
-    <key type="i" name="workspace-number-font-size">
-      <default>22</default>
+    <key type="b" name="wsb-show-workspace-number">
+      <default>false</default>
+      <summary>Whether to show the workspace number all the time</summary>
+      <description></description>
+    </key>
+    <key type="i" name="wsb-number-font-size">
+      <default>20</default>
       <summary>The size of the workspace number (pixels)</summary>
       <description></description>
     </key>
-    <key type="i" name="app-icon-size">
-      <default>30</default>
+    <key type="i" name="wsb-icon-size">
+      <default>28</default>
       <summary>The size of each icon (pixels)</summary>
       <description></description>
     </key>
-    <key type="i" name="app-icon-spacing">
+    <key type="i" name="wsb-icon-spacing">
       <default>0</default>
       <summary>The spacing between the icons in each workspace button (pixels)</summary>
       <description></description>
     </key>
-    <key type="s" name="workspace-button-background-color">
-      <default>"#3c3c3c"</default>
-      <summary>The color of the active workspace</summary>
-      <description></description>
-    </key>
-    <key type="s" name="active-workspace-color">
+    <key type="s" name="wsb-active-button-background-color">
       <default>"#c64600"</default>
-      <summary>The color of the active workspace</summary>
+      <summary>The background color of the inactive workspace button</summary>
       <description></description>
     </key>
-    <key type="s" name="inactive-workspace-color">
+    <key type="s" name="wsb-inactive-button-background-color">
+      <default>"#3c3c3c"</default>
+      <summary>The background color of the inactive workspace button</summary>
+      <description></description>
+    </key>
+    <key type="s" name="wsb-active-workspace-number-background-color">
+      <default>"#c64600"</default>
+      <summary>The background color for the number of the active workspace</summary>
+      <description></description>
+    </key>
+    <key type="s" name="wsb-inactive-workspace-number-background-color">
       <default>"#5a5a5a"</default>
-      <summary>The color of the active workspace</summary>
+      <summary>The background color for the number of the inactive workspace</summary>
       <description></description>
     </key>
-    <key type="b" name="container-scroll-to-switch-workspace">
+    <key type="b" name="wsb-container-scroll-to-switch-workspace">
       <default>true</default>
       <summary>Enable scrolling on the container to switch workspaces.</summary>
       <description>
@@ -44,7 +54,7 @@
         This option exists to prevent such conflicts by allowing you to toggle this behavior.
       </description>
     </key>
-    <key type="b" name="middle-click-ignores-clicked-workspace">
+    <key type="b" name="wsb-middle-click-ignores-clicked-workspace">
       <default>false</default>
       <summary>Middle click always opens overview for the current workspace.</summary>
       <description>
@@ -52,7 +62,7 @@
         This makes it so that until you manually switch to another workspace, middle clicking anywhere in the container opens overview for the current workspace.
       </description>
     </key>
-    <key type="b" name="right-click-ignores-clicked-workspace">
+    <key type="b" name="wsb-right-click-ignores-clicked-workspace">
       <default>false</default>
       <summary>Right click always opens window switcher for the current workspace.</summary>
       <description>
