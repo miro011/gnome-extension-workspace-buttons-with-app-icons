@@ -137,6 +137,25 @@ export default class WorkspaceButtons {
         this._update_ws_numbers(monitorIndex);
     }
 
+    swap_ws_btns(monitorIndex, wsIndex1, wsIndex2) {
+        log("HELOOOOOOOOOOOOOOOOO");
+        let containerElem = this.containersArr[monitorIndex];
+        let children = containerElem.get_children();
+        let btn1 = children[wsIndex1];
+        let btn2 = children[wsIndex2];
+        let placeHolder1 = new Clutter.Actor();
+        let placeHolder2 = new Clutter.Actor();
+
+        containerElem.replace_child(btn1, placeHolder1);
+        containerElem.replace_child(btn2, placeHolder2);
+
+        containerElem.replace_child(placeHolder1, btn2);
+        containerElem.replace_child(placeHolder2, btn1);
+
+        this._update_ws_numbers(monitorIndex);
+        this.update_active_workspace();
+    }
+
     //////////////////////////////////////
     // WINDOW ICONS
 
