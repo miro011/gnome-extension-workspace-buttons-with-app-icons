@@ -3,11 +3,15 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 export default class Topbars {
     constructor() {
+        this._init();
+    }
+
+    _init() {
         this.containersArr = [];
         this.mainMonitorIndex = Main.layoutManager.primaryMonitor.index;
     }
 
-    _rm_top_bars() {
+    destroy() {
         for (let i=0; i<this.containersArr.length; i++) {
             if (i === this.mainMonitorIndex) continue;
 
@@ -18,18 +22,8 @@ export default class Topbars {
 
             this.containersArr[i].destroy();
         }
-    }
-
-    destroy() {
-        this._rm_top_bars();
         this.containersArr = null;
         this.mainMonitorIndex = null;
-    }
-
-    reset() {
-        this._rm_top_bars();
-        this.containersArr = [];
-        this.mainMonitorIndex = Main.layoutManager.primaryMonitor.index;
     }
 
     //////////////////////////////////////

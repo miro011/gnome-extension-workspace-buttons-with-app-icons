@@ -13,26 +13,22 @@ export default class WorkspaceButtons {
         this.extSettingsRealTimeObj = extSettingsRealTimeObj;
         this.extSettings = extSettings;
         this.winIdsContRepr = winIdsContRepr;
+        this._init();
+    }
+
+    _init() {
         this.containersArr = [];
         this._enable_settings_events();
     }
 
-    _rm_containers() {
+    destroy() {
         this.containersArr.forEach(container => {
             container.destroy();
         });
-    }
-
-    destroy() {
-        this._rm_containers();
+        this.extSettingsRealTimeObj = null;
         this.extSettings = null;
         this.winIdsContRepr = null;
         this.containersArr = null;
-    }
-
-    reset() {
-        this._rm_containers();
-        this.containersArr = [];
     }
 
     //////////////////////////////////////
@@ -56,6 +52,9 @@ export default class WorkspaceButtons {
         });
 
         containerElem.connect("button-press-event", (actor, event) => {
+            let monitorIndex = global.display.get_current_monitor();
+            Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[monitorIndex];
+
             let btnPressed = event.get_button();
         
             if (btnPressed === Clutter.BUTTON_SECONDARY && this.extSettings.get("wsb-right-click-ignores-clicked-workspace")) {
@@ -397,5 +396,5 @@ export default class WorkspaceButtons {
         };
     
         windowSwitcher.show(0, 0, 0);
-    }
+    } 
 }

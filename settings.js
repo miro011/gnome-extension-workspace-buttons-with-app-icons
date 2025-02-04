@@ -1,7 +1,11 @@
 export default class Settings {
-    constructor(realTimeSettingsObj, infoObj) {
-        this.realTimeObj = realTimeSettingsObj;
+    constructor(realTimeObj, infoObj) {
+        this.realTimeObj = realTimeObj;
         this.infoObj = infoObj;
+        this._init();
+    }
+
+    _init() {
         this.staticObj = {};
         this.eventIdsArr = [];
         for (let settingName in this.infoObj) {
@@ -14,11 +18,11 @@ export default class Settings {
         this.eventIdsArr.forEach(eventId => {
             this.realTimeObj.disconnect(eventId);
         });
+        this.eventIdsArr = null;
 
         this.realTimeObj = null;
         this.infoObj = null;
         this.staticObj = null;
-        this.eventIdsArr = null;
     }
 
     get(settingName) {

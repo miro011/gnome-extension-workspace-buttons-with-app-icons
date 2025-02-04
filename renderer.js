@@ -3,6 +3,8 @@
 import Meta from "gi://Meta";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Gio from "gi://Gio";
+import GLib from "gi://GLib";
+
 
 import Settings from "./settings.js";
 import * as constants from "./constants.js";
@@ -11,19 +13,24 @@ import Topbars from "./topbars.js";
 
 export default class Renderer {
     constructor(extSettingsRealTimeObj) {
-        this.winIdsContRepr = []; // [m0[ws0[winId, winId], ws1[winId]], m1[...]....] - same structure as the ws buttons container
- 
         this.extSettingsRealTimeObj = extSettingsRealTimeObj;
-        this.extSettings = new Settings(extSettingsRealTimeObj, constants.extensionSettingsInfoObj);
+        this._init();
+    }
+
+    _init() {
+        this.winIdsContRepr = []; // [m0[ws0[winId, winId], ws1[winId]], m1[...]....] - same structure as the ws buttons container
+        this.extSettings = new Settings(this.extSettingsRealTimeObj, constants.extensionSettingsInfoObj);
         this.mutterSettingsRealTimeObj = new Gio.Settings({ schema: 'org.gnome.mutter' });
         this.mutterSettings = new Settings(this.mutterSettingsRealTimeObj, constants.mutterSettingsInfoObj);
 
         this.topbars = new Topbars();
         this.workspaceButtons = new WorkspaceButtons(this.extSettingsRealTimeObj, this.extSettings, this.winIdsContRepr);
 
-        this.numMonitors = null;
-        this.wsOnlyOnPrimary = null;
-        this.mainMonitorIndex = null;
+        this.numMonitors = global.display.get_n_monitors();
+        this.wsOnlyOnPrimary = (this.mutterSettings.get("workspaces-only-on-primary") === true) ? true : false;
+        this.mainMonitorIndex = Main.layoutManager.primaryMonitor.index;
+
+        //log(`numMonitors=${this.numMonitors}\nwsOnlyOnPrimary=${this.wsOnlyOnPrimary}\nmainMonitorIndex=${this.mainMonitorIndex}`);
 
         this.gnomeEventIdsObj = {"display": [], "workspace_manager": []};
         // holds the monitors changed event - which is crucial - whenever monitors change we need to reset and re-populate
@@ -35,12 +42,10 @@ export default class Renderer {
         this._enable_gnome_events();
     }
 
-    destroy() {
-        this.winIdsContRepr = null;
-
+    destroy(full=true) {
         this.extSettings.destroy();
         this.extSettings = null;
-        this.extSettingsRealTimeObj = null;
+        if (full===true) this.extSettingsRealTimeObj = null;
         this.mutterSettings.destroy();
         this.mutterSettings = null;
         this.mutterSettingsRealTimeObj = null;
@@ -49,10 +54,6 @@ export default class Renderer {
         this.topbars = null;
         this.workspaceButtons.destroy();
         this.workspaceButtons = null;
-
-        this.numMonitors = null;
-        this.wsOnlyOnPrimary = null;
-        this.mainMonitorIndex = null;
 
         Main.layoutManager.disconnect(this.layoutManagerEventId);
         this.layoutManagerEventId = null;
@@ -64,18 +65,8 @@ export default class Renderer {
             }
         }
         this.gnomeEventIdsObj = null;
-        this._disable_workspace_added_events();
-    }
-
-    _reset() {
-        this.winIdsContRepr = [];
-        this.topbars.reset();
-        this.workspaceButtons.reset();
-        this._disable_workspace_added_events();
-    }
-
-    // for the workspaces that remain, we wanna clean up the window added event
-    _disable_workspace_added_events() {
+        
+        // for the workspaces that remain, we wanna clean up the window added event
         for (let wsIndex=0; wsIndex<global.workspace_manager.get_n_workspaces(); wsIndex++) {
             let wsObj = global.workspace_manager.get_workspace_by_index(wsIndex);
             if (wsObj.hasOwnProperty("_windowAddedEventId")) {
@@ -84,19 +75,22 @@ export default class Renderer {
                 delete wsObj["_windowAddedEventId"]; // Completely remove property
             }
         }
+
+        this.winIdsContRepr = null;
+        this.numMonitors = null;
+        this.wsOnlyOnPrimary = null;
+        Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[this.mainMonitorIndex];
+        this.mainMonitorIndex = null;
     }
 
     //////////////////////////////////////
 
     _initial_population() {
-        this._reset();
-        this.numMonitors = global.display.get_n_monitors();
-        this.wsOnlyOnPrimary = (this.mutterSettings.get("workspaces-only-on-primary") === true) ? true : false;
-        this.mainMonitorIndex = Main.layoutManager.primaryMonitor.index;
+        //log("initial population");
 
         // Monitors and creation of base elements
         for (let monitorIndex = 0; monitorIndex < this.numMonitors; monitorIndex++) {
-            this.topbars.add_topbar(monitorIndex);
+            this.topbars.add_topbar(monitorIndex); // this causes some error without trace
             this.winIdsContRepr.push([]);
             let newWsBtnsContainer = this.workspaceButtons.add_container();
             this.topbars.append_workspace_buttons(monitorIndex, newWsBtnsContainer);
@@ -105,6 +99,8 @@ export default class Renderer {
         // Windows
         for (let wsIndex = 0; wsIndex < global.workspace_manager.get_n_workspaces(); wsIndex++) {
             let windowsPerMonitorArr = this._get_ws_windows_by_monitor(wsIndex); // [m1[id,id,id], m2[]] (wsIndex=x)
+            //log("windowsPerMonitorArr");
+            //log(windowsPerMonitorArr);
 
             for (let monitorIndex=0; monitorIndex < this.numMonitors; monitorIndex++) {
                 if (windowsPerMonitorArr[monitorIndex] === null) continue;
@@ -131,19 +127,31 @@ export default class Renderer {
         let id;
 
         id = this.mutterSettingsRealTimeObj.connect('changed::workspaces-only-on-primary', () => {
-            this._initial_population();
+            this.destroy(false);
+            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                this._init();
+                return GLib.SOURCE_REMOVE; // Ensures it only runs once
+            });
         });
         this.mutterSettings.add_event_id(id);
 
         id = this.mutterSettingsRealTimeObj.connect('changed::dynamic-workspaces', () => {
-            this._initial_population();
+            this.destroy(false);
+            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                this._init();
+                return GLib.SOURCE_REMOVE; // Ensures it only runs once
+            });
         });
         this.mutterSettings.add_event_id(id);
     }
 
     _enable_gnome_events() {
         this.layoutManagerEventId = Main.layoutManager.connect('monitors-changed', () => {
-            this._initial_population();
+            this.destroy(false);
+            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                this._init();
+                return GLib.SOURCE_REMOVE; // Ensures it only runs once
+            });
         });
 
         this.gnomeEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("active-workspace-changed", () => {
@@ -329,24 +337,30 @@ export default class Renderer {
                 this.winIdsContRepr[newMonitorIndex][newWsIndex].unshift(windowId);
             }
         }));
+        
 
         // here, we're only concenred about focus changes on existing windows on the same monitor-workspace combo
         // (this event triggers for other things too - when window is opened, or closed - or basically any time focus is changed - all of which is handled exclusively)
         this.gnomeEventIdsObj["display"].push(global.display.connect("notify::focus-window", () => {
             let newlyFocusedWindowObj = global.display.focus_window;
+            //== Meta.WindowType.NORMAL
             if (!newlyFocusedWindowObj) return; // if last window in a workspace (empty workspace) is closed event will fire but there will be no focused window
+
+            let monitorIndex = newlyFocusedWindowObj.get_monitor();
+            // this is the only way I found to display AltTab in the current monitor - overriding primaryMonitor
+            // this is what behind the scenes functions for AltTab and the methods it extends use
+            // I tried overriding the methods but it doesn't work because they're called directly by Clutter (I think it was in C) but this right here is how they decide which monitor to show AltTab on
+            Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[monitorIndex];
+            let wsIndex = newlyFocusedWindowObj.get_workspace().index();
+            if (this.wsOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex) {
+                wsIndex = 0;
+            }
 
             let winIdsMeta = this._get_winIdsMeta();
             
             let windowId = newlyFocusedWindowObj.get_id();
             if (winIdsMeta[windowId] === undefined) {
                 return; // newly opened window
-            }
-
-            let monitorIndex = newlyFocusedWindowObj.get_monitor();
-            let wsIndex = newlyFocusedWindowObj.get_workspace().index();
-            if (this.wsOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex) {
-                wsIndex = 0;
             }
 
             if (winIdsMeta[windowId]["monitorIndex"] !== monitorIndex || winIdsMeta[windowId]["wsIndex"] !== wsIndex) {
