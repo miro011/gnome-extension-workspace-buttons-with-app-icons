@@ -4,6 +4,8 @@ import Shell from "gi://Shell";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as AltTab from "resource:///org/gnome/shell/ui/altTab.js";
 import Clutter from "gi://Clutter";
+import GLib from "gi://GLib";
+
 
 export default class WorkspaceButtons {
     //////////////////////////////////////
@@ -180,13 +182,28 @@ export default class WorkspaceButtons {
     }
 
     _get_new_window_icon(windowObj) {
-        let appObj = Shell.WindowTracker.get_default().get_window_app(windowObj);
         let windowIconWrapperElem = new St.BoxLayout({ style_class: "app-icon-wrapper" });
         this._update_style(windowIconWrapperElem, `margin-right: ${this.extSettings.get("wsb-icon-spacing")}px;`);
         windowIconWrapperElem.windowId = windowObj.get_id();
-        windowIconWrapperElem.add_child(appObj.create_icon_texture(this.extSettings.get('wsb-icon-size')));
+    
+        // Add a small delay to allow time for the app's icon to load properly, especially for XWayland (GTK3) apps
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
+            let appObj = Shell.WindowTracker.get_default().get_window_app(windowObj);
+    
+            // If the appObj is valid, add the icon texture
+            if (appObj) {
+                windowIconWrapperElem.add_child(appObj.create_icon_texture(this.extSettings.get('wsb-icon-size')));
+            } else {
+                // Fallback icon if the appObj is not found
+                let placeholderIcon = new St.Icon({ icon_name: 'image-missing-symbolic', icon_size: this.extSettings.get('wsb-icon-size') });
+                windowIconWrapperElem.add_child(placeholderIcon);
+            }
+        });
+    
         return windowIconWrapperElem;
     }
+    
+    
 
     //////////////////////////////////////
     // WORKSPACE NUMBERS
