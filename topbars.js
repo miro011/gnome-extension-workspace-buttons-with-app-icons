@@ -1,5 +1,7 @@
-import St from "gi://St";
-import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import GObject from 'gi://GObject';
+import Clutter from 'gi://Clutter';
+import St from 'gi://St';
 
 export default class Topbars {
     constructor() {
@@ -29,60 +31,107 @@ export default class Topbars {
     //////////////////////////////////////
 
     add_topbar(monitorIndex) {
+        log(`Adding topbar for index ${monitorIndex}`);
         if (monitorIndex === this.mainMonitorIndex) {
-            this._add_orig_topbar();
+            this.containersArr.push(Main.panel);
         }
         else {
             let monitorObj = Main.layoutManager.monitors[monitorIndex];
-            this._add_and_position_extra_topbar(monitorObj);
+            let panel = new SidePanel(monitorObj);
+            this.containersArr.push(panel);
         }
-    }
-
-    // monitorObj needed for positioning purposes
-    _add_and_position_extra_topbar(monitorObj) {
-        // Create a new container for the top bar on this monitor
-        let container = new St.BoxLayout({style_class: 'top-bar'});
-
-        // Create layout sections for the top bar
-        let leftBox = new St.BoxLayout({ style_class: 'left-box' });
-        let rightBox = new St.BoxLayout({ style_class: 'right-box' });
-
-        // Add the original quick settings to the right box
-        let quickSettings = Main.panel.statusArea.quickSettings;
-        if (quickSettings) {
-            rightBox.add_child(quickSettings.container);
-        }
-
-        // Add the original date menu to the right box (after quick settings)
-        let dateMenu = Main.panel.statusArea.dateMenu;
-        if (dateMenu) {
-            rightBox.add_child(dateMenu.container);
-        }
-
-        // Add the layout sections to the top bar
-        container.add_child(leftBox);
-        container.add_child(rightBox);
-
-        // Position the top bar on the new monitor
-        Main.layoutManager.addTopChrome(container);
-        container.set_position(monitorObj.x, monitorObj.y);
-
-        // Append to containersArr to keep track
-        this.containersArr.push(container);
-    }
-
-    _add_orig_topbar() {
-        this.containersArr.push(Main.panel);
     }
 
     //////////////////////////////////////
 
     append_workspace_buttons(monitorIndex, wsBtnsContainer) {
-        if (monitorIndex === this.mainMonitorIndex) {
-            this.containersArr[monitorIndex]._leftBox.insert_child_at_index(wsBtnsContainer, 0);
-        }
-        else {
-            this.containersArr[monitorIndex].get_children()[0].add_child(wsBtnsContainer); // left box
-        }
+        this.containersArr[monitorIndex]._leftBox.insert_child_at_index(wsBtnsContainer, 0);
     }
 }
+
+
+const SidePanel = GObject.registerClass(
+class SidePanel extends St.Widget {
+    _init(monitor) {
+        super._init({
+            name: 'panel',
+            reactive: true,
+        });
+
+        this._monitor = monitor;
+
+        this._leftBox = new St.BoxLayout({name: 'panelLeft'});
+        this.add_child(this._leftBox);
+        this._centerBox = new St.BoxLayout({name: 'panelCenter'});
+        this.add_child(this._centerBox);
+        this._rightBox = new St.BoxLayout({name: 'panelRight'});
+        this.add_child(this._rightBox);
+
+        Main.uiGroup.add_child(this);
+        Main.layoutManager.addChrome(this, {
+            affectsInputRegion: true,
+            affectsStruts: true, // **Important: This makes Mutter respect it**
+        });
+        this.set_position(this._monitor.x, this._monitor.y);
+    }
+
+    vfunc_get_preferred_width(_forHeight) {
+        return [0, this._monitor.width];
+    }
+
+    vfunc_allocate(box) {
+        this.set_allocation(box);
+
+        let allocWidth = box.x2 - box.x1;
+        let allocHeight = box.y2 - box.y1;
+
+        let [, leftNaturalWidth] = this._leftBox.get_preferred_width(-1);
+        let [, centerNaturalWidth] = this._centerBox.get_preferred_width(-1);
+        let [, rightNaturalWidth] = this._rightBox.get_preferred_width(-1);
+
+        let sideWidth, centerWidth;
+        centerWidth = centerNaturalWidth;
+
+        // get workspace area and center date entry relative to it
+        let centerOffset = 0;
+
+        let workArea = Main.layoutManager.getWorkAreaForMonitor(this._monitor.index);
+        centerOffset = 2 * (workArea.x - this._monitor.x) + workArea.width - this._monitor.width;
+
+        sideWidth = Math.max(0, (allocWidth - centerWidth + centerOffset) / 2);
+
+        let childBox = new Clutter.ActorBox();
+
+        childBox.y1 = 0;
+        childBox.y2 = allocHeight;
+        if (this.get_text_direction() === Clutter.TextDirection.RTL) {
+            childBox.x1 = Math.max(
+                allocWidth - Math.min(Math.floor(sideWidth), leftNaturalWidth),
+                0);
+            childBox.x2 = allocWidth;
+        } else {
+            childBox.x1 = 0;
+            childBox.x2 = Math.min(Math.floor(sideWidth), leftNaturalWidth);
+        }
+        this._leftBox.allocate(childBox);
+
+        childBox.x1 = Math.ceil(sideWidth);
+        childBox.y1 = 0;
+        childBox.x2 = childBox.x1 + centerWidth;
+        childBox.y2 = allocHeight;
+        this._centerBox.allocate(childBox);
+
+        childBox.y1 = 0;
+        childBox.y2 = allocHeight;
+        if (this.get_text_direction() === Clutter.TextDirection.RTL) {
+            childBox.x1 = 0;
+            childBox.x2 = Math.min(Math.floor(sideWidth), rightNaturalWidth);
+        } else {
+            childBox.x1 = Math.max(
+                allocWidth - Math.min(Math.floor(sideWidth), rightNaturalWidth),
+                0);
+            childBox.x2 = allocWidth;
+        }
+        this._rightBox.allocate(childBox);
+    }
+});
