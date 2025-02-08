@@ -18,6 +18,7 @@ export default class Renderer {
     }
 
     _init() {
+        log("renderer => _init");
         this.winIdsContRepr = []; // [m0[ws0[winId, winId], ws1[winId]], m1[...]....] - same structure as the ws buttons container
         this.extSettings = new Settings(this.extSettingsRealTimeObj, constants.extensionSettingsInfoObj);
         this.mutterSettingsRealTimeObj = new Gio.Settings({ schema: 'org.gnome.mutter' });
@@ -32,20 +33,20 @@ export default class Renderer {
 
         //log(`numMonitors=${this.numMonitors}\nwsOnlyOnPrimary=${this.wsOnlyOnPrimary}\nmainMonitorIndex=${this.mainMonitorIndex}`);
 
-        this.gnomeEventIdsObj = {"display": [], "workspace_manager": []};
-        // holds the monitors changed event - which is crucial - whenever monitors change we need to reset and re-populate
-        // as operations below rely on the hardcoded monitor config established during population
-        this.layoutManagerEventId;
+        this.gnomeGlobalEventIdsObj = {"display": [], "workspace_manager": []};
+        this.gnomeMainEventIdsObj = {"layoutManager": []};
         
         this._initial_population();
         this._enable_settings_events();
         this._enable_gnome_events();
     }
 
-    destroy(full=true) {
+    destroy(full=true, restorePrimaryMonitor=true) {
         this.extSettings.destroy();
         this.extSettings = null;
-        if (full===true) this.extSettingsRealTimeObj = null;
+        if (full===true) {
+            this.extSettingsRealTimeObj = null;
+        }
         this.mutterSettings.destroy();
         this.mutterSettings = null;
         this.mutterSettingsRealTimeObj = null;
@@ -55,16 +56,23 @@ export default class Renderer {
         this.workspaceButtons.destroy();
         this.workspaceButtons = null;
 
-        Main.layoutManager.disconnect(this.layoutManagerEventId);
-        this.layoutManagerEventId = null;
-        for (let component in this.gnomeEventIdsObj) {
-            let componentObj = global[component];
-            let eventIdsArr = this.gnomeEventIdsObj[component];
+        for (let component in this.gnomeMainEventIdsObj) {
+            let componentObj = Main[component];
+            let eventIdsArr = this.gnomeMainEventIdsObj[component];
             for (let eventId of eventIdsArr) {
                 componentObj.disconnect(eventId);
             }
         }
-        this.gnomeEventIdsObj = null;
+        this.gnomeMainEventIdsObj = null;
+
+        for (let component in this.gnomeGlobalEventIdsObj) {
+            let componentObj = global[component];
+            let eventIdsArr = this.gnomeGlobalEventIdsObj[component];
+            for (let eventId of eventIdsArr) {
+                componentObj.disconnect(eventId);
+            }
+        }
+        this.gnomeGlobalEventIdsObj = null;
         
         // for the workspaces that remain, we wanna clean up the window added event
         for (let wsIndex=0; wsIndex<global.workspace_manager.get_n_workspaces(); wsIndex++) {
@@ -79,7 +87,9 @@ export default class Renderer {
         this.winIdsContRepr = null;
         this.numMonitors = null;
         this.wsOnlyOnPrimary = null;
-        Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[this.mainMonitorIndex];
+        if (restorePrimaryMonitor) {
+            Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[this.mainMonitorIndex];
+        }
         this.mainMonitorIndex = null;
     }
 
@@ -146,19 +156,20 @@ export default class Renderer {
     }
 
     _enable_gnome_events() {
-        this.layoutManagerEventId = Main.layoutManager.connect('monitors-changed', () => {
-            this.destroy(false);
+        this.gnomeMainEventIdsObj["layoutManager"].push(Main.layoutManager.connect('monitors-changed', () => {
+            log("monitors-changed");
+            this.destroy(false, false); // don't wanna change back to the old (saved) primary. If primary monitor was changed it could be different. Other monitor operations (add, remove) may re-write it either - I haven't tested that
             GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                 this._init();
                 return GLib.SOURCE_REMOVE; // Ensures it only runs once
             });
-        });
+        }));
 
-        this.gnomeEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("active-workspace-changed", () => {
+        this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("active-workspace-changed", () => {
             this.workspaceButtons.update_active_workspace();
         }));
 
-        this.gnomeEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspace-added", (wm, wsIndex) => {
+        this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspace-added", (wm, wsIndex) => {
             //log("ws added");
             // if workspaces is only on primary, it can only be added to the main monitor, otherwise, all monitors
             if (this.wsOnlyOnPrimary) {
@@ -175,7 +186,7 @@ export default class Renderer {
             this._add_window_added_event_to_workspace(wsIndex);
         }));
 
-        this.gnomeEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspace-removed", (wm, wsIndex) => {
+        this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspace-removed", (wm, wsIndex) => {
             //log("ws removed");
             if (this.wsOnlyOnPrimary) {
                 this.winIdsContRepr[this.mainMonitorIndex].splice(wsIndex, 1);
@@ -191,7 +202,7 @@ export default class Renderer {
             this.workspaceButtons.update_active_workspace();
         }));
         
-        this.gnomeEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspaces-reordered", () => {
+        this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspaces-reordered", () => {
             //log("workspaces-reordered");
             //this._debug_log_structures();
             // Whether a workspace is moved left or moved right, we go left to right
@@ -295,7 +306,7 @@ export default class Renderer {
             //this._debug_log_structures();
         }));
 
-        this.gnomeEventIdsObj["display"].push(global.display.connect('window-created', (display, windowObj) => {
+        this.gnomeGlobalEventIdsObj["display"].push(global.display.connect('window-created', (display, windowObj) => {
             if (windowObj.get_window_type() !== Meta.WindowType.NORMAL) return;
             //log("window created");
 
@@ -313,7 +324,7 @@ export default class Renderer {
         // a window leaves a monitor if it's a/ closed or b/ moved to another monitor
         // when moved to another monitor, it is possible to also be moved to another workspace, but we don't care about that - we just move it to the monitor
         // the window added to workspace event is seperate and triggers seperate which then moves it to the right workspace if the window did in fact move to another workspace
-        this.gnomeEventIdsObj["display"].push(global.display.connect('window-left-monitor', (display, oldMonitorIndex, windowObj) => {
+        this.gnomeGlobalEventIdsObj["display"].push(global.display.connect('window-left-monitor', (display, oldMonitorIndex, windowObj) => {
             if (windowObj.get_window_type() !== Meta.WindowType.NORMAL) return;
 
             let winIdsMeta = this._get_winIdsMeta();
@@ -341,7 +352,7 @@ export default class Renderer {
 
         // here, we're only concenred about focus changes on existing windows on the same monitor-workspace combo
         // (this event triggers for other things too - when window is opened, or closed - or basically any time focus is changed - all of which is handled exclusively)
-        this.gnomeEventIdsObj["display"].push(global.display.connect("notify::focus-window", () => {
+        this.gnomeGlobalEventIdsObj["display"].push(global.display.connect("notify::focus-window", () => {
             let newlyFocusedWindowObj = global.display.focus_window;
             //== Meta.WindowType.NORMAL
             if (!newlyFocusedWindowObj) return; // if last window in a workspace (empty workspace) is closed event will fire but there will be no focused window
