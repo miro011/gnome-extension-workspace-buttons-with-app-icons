@@ -180,6 +180,12 @@ export default class WorkspaceButtons {
         oldParent.remove_child(elemToMove);
         let newParent = this.containersArr[newMonitorIndex].get_children()[newWsIndex].get_children()[1];
         newParent.insert_child_at_index(elemToMove, newWindowIndex);
+
+        if (this.extSettings.get("wsb-show-workspace-number") === false && newMonitorIndex === this.mainMonitorIndex && newParent.get_children().length === 1) {
+            // to fix a weird glitch, where when workspace numbers are hidden and window is moved from a non-main monitor to the main one
+            // and the workspace on the main one is empty before that, the icon doesn't show up until the next event or hover
+            newParent.queue_redraw();
+        }
     }
 
     remove_window_icon(monitorIndex, wsIndex, windowIndex) {
