@@ -18,20 +18,20 @@ export default class Renderer {
     }
 
     _init() {
-        log("renderer => _init");
-        this.winIdsContRepr = []; // [m0[ws0[winId, winId], ws1[winId]], m1[...]....] - same structure as the ws buttons container
+        //log("renderer => _init");
         this.extSettings = new Settings(this.extSettingsRealTimeObj, constants.extensionSettingsInfoObj);
         this.mutterSettingsRealTimeObj = new Gio.Settings({ schema: 'org.gnome.mutter' });
         this.mutterSettings = new Settings(this.mutterSettingsRealTimeObj, constants.mutterSettingsInfoObj);
 
-        this.topbars = new Topbars();
-        this.workspaceButtons = new WorkspaceButtons(this.extSettingsRealTimeObj, this.extSettings, this.winIdsContRepr);
-
+        this.winIdsContRepr = []; // [m0[ws0[winId, winId], ws1[winId]], m1[...]....] - same structure as the ws buttons container
+        
         this.numMonitors = global.display.get_n_monitors();
-        this.wsOnlyOnPrimary = (this.mutterSettings.get("workspaces-only-on-primary") === true) ? true : false;
+        this.wssOnlyOnPrimary = (this.mutterSettings.get("workspaces-only-on-primary") === true) ? true : false;
         this.mainMonitorIndex = Main.layoutManager.primaryMonitor.index;
+        //log(`mainMonitorIndex=${this.mainMonitorIndex}`);
 
-        //log(`numMonitors=${this.numMonitors}\nwsOnlyOnPrimary=${this.wsOnlyOnPrimary}\nmainMonitorIndex=${this.mainMonitorIndex}`);
+        this.topbars = new Topbars(this.mainMonitorIndex);
+        this.workspaceButtons = new WorkspaceButtons(this.extSettingsRealTimeObj, this.extSettings, this.winIdsContRepr, this.wssOnlyOnPrimary, this.mainMonitorIndex);
 
         this.gnomeGlobalEventIdsObj = {"display": [], "workspace_manager": []};
         this.gnomeMainEventIdsObj = {"layoutManager": []};
@@ -86,7 +86,7 @@ export default class Renderer {
 
         this.winIdsContRepr = null;
         this.numMonitors = null;
-        this.wsOnlyOnPrimary = null;
+        this.wssOnlyOnPrimary = null;
         if (restorePrimaryMonitor) {
             Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[this.mainMonitorIndex];
         }
@@ -131,9 +131,6 @@ export default class Renderer {
     }
 
     _enable_settings_events() {
-        // just like monitors changed, there are hardcoded values, established during intial population that rely on workspaces-only-on-primary and dynamic workspaces
-        // not only that but the way the processing in this class works is one step at a time - for ex:
-        // if we don't reload when dynamic workspaces is toggled, all of a sudden you have potentially multiple new workspaces and everything will be way off
         let id;
 
         id = this.mutterSettingsRealTimeObj.connect('changed::workspaces-only-on-primary', () => {
@@ -157,7 +154,7 @@ export default class Renderer {
 
     _enable_gnome_events() {
         this.gnomeMainEventIdsObj["layoutManager"].push(Main.layoutManager.connect('monitors-changed', () => {
-            log("monitors-changed");
+            //log("monitors-changed");
             this.destroy(false, false); // don't wanna change back to the old (saved) primary. If primary monitor was changed it could be different. Other monitor operations (add, remove) may re-write it either - I haven't tested that
             GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                 this._init();
@@ -172,7 +169,7 @@ export default class Renderer {
         this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspace-added", (wm, wsIndex) => {
             //log("ws added");
             // if workspaces is only on primary, it can only be added to the main monitor, otherwise, all monitors
-            if (this.wsOnlyOnPrimary) {
+            if (this.wssOnlyOnPrimary) {
                 this.winIdsContRepr[this.mainMonitorIndex].splice(wsIndex, 0, []);
                 this.workspaceButtons.add_ws_btn(this.mainMonitorIndex, wsIndex);
             }
@@ -188,7 +185,7 @@ export default class Renderer {
 
         this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspace-removed", (wm, wsIndex) => {
             //log("ws removed");
-            if (this.wsOnlyOnPrimary) {
+            if (this.wssOnlyOnPrimary) {
                 this.winIdsContRepr[this.mainMonitorIndex].splice(wsIndex, 1);
                 this.workspaceButtons.rm_ws_btn(this.mainMonitorIndex, wsIndex);
             }
@@ -218,7 +215,7 @@ export default class Renderer {
                 let firstWindowIdToLookForType; // cur or old - we need this to accomodate swaps between a workspace with windows and one without any
 
                 // find the first instance of an inquality
-                if (this.wsOnlyOnPrimary) {
+                if (this.wssOnlyOnPrimary) {
                     // here we only care about changes on the primary monitor
                     let firstOldWindowId = this.winIdsContRepr[this.mainMonitorIndex][wsIndex1][0];
                     let firstNewWindowObject = windowsPerMonitorArrWsIndex1[this.mainMonitorIndex][0];
@@ -267,7 +264,7 @@ export default class Renderer {
                             //log(`firstOldWindowId=${firstOldWindowId}`);
                             if (firstOldWindowId === firstWindowIdToLookFor) {
                                 // DO
-                                if (this.wsOnlyOnPrimary) {
+                                if (this.wssOnlyOnPrimary) {
                                     [this.winIdsContRepr[firstNeMonitorIndex][wsIndex1], this.winIdsContRepr[firstNeMonitorIndex][wsIndex2]] = [this.winIdsContRepr[firstNeMonitorIndex][wsIndex2], this.winIdsContRepr[firstNeMonitorIndex][wsIndex1]];
                                     this.workspaceButtons.swap_ws_btns(firstNeMonitorIndex, wsIndex1, wsIndex2);
                                 }
@@ -287,7 +284,7 @@ export default class Renderer {
                             //log(`firstNewWindowId=${firstNewWindowId}`);
                             if (firstNewWindowId === firstWindowIdToLookFor) {
                                 // DO
-                                if (this.wsOnlyOnPrimary) {
+                                if (this.wssOnlyOnPrimary) {
                                     [this.winIdsContRepr[firstNeMonitorIndex][wsIndex1], this.winIdsContRepr[firstNeMonitorIndex][wsIndex2]] = [this.winIdsContRepr[firstNeMonitorIndex][wsIndex2], this.winIdsContRepr[firstNeMonitorIndex][wsIndex1]];
                                     this.workspaceButtons.swap_ws_btns(firstNeMonitorIndex, wsIndex1, wsIndex2);
                                 }
@@ -313,24 +310,35 @@ export default class Renderer {
             let windowId = windowObj.get_id();
             let monitorIndex = windowObj.get_monitor();
             let wsIndex = windowObj.get_workspace().index();
-            if (this.wsOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex) {
+            if (this.wssOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex) {
                 wsIndex = 0;
             }
 
+            //log(`adding new window with id ${windowId} to winIdsContRepr`);
             this.winIdsContRepr[monitorIndex][wsIndex].unshift(windowId);
             this.workspaceButtons.add_window_icon("l", windowObj, monitorIndex, wsIndex);
+            //log("added icon to container (may take a bit to show)");
         }));
 
         // a window leaves a monitor if it's a/ closed or b/ moved to another monitor
         // when moved to another monitor, it is possible to also be moved to another workspace, but we don't care about that - we just move it to the monitor
-        // the window added to workspace event is seperate and triggers seperate which then moves it to the right workspace if the window did in fact move to another workspace
+        // note that if the window-added (to workspace) event triggers before this one, it will move it to both the right workspace and monitor, and this function will return because everything matches
         this.gnomeGlobalEventIdsObj["display"].push(global.display.connect('window-left-monitor', (display, oldMonitorIndex, windowObj) => {
             if (windowObj.get_window_type() !== Meta.WindowType.NORMAL) return;
 
+            //log("window left monitor");
+
             let winIdsMeta = this._get_winIdsMeta();
             
-            let newMonitorIndex = windowObj.get_monitor(); // if window was closeed this returns -1
+            let newMonitorIndex = windowObj.get_monitor(); // if window was closed this returns -1
             let windowId = windowObj.get_id();
+            let oldSavedMonitorIndex = winIdsMeta[windowId]["monitorIndex"];
+
+            // if window entered workspace triggers before this event, it has already moved it to the right monitor, so have nothing left to do
+            if (oldSavedMonitorIndex === newMonitorIndex) {
+                return;
+            }
+
             let oldWsIndex = winIdsMeta[windowId]["wsIndex"];
             let oldWindowIndex = this.winIdsContRepr[oldMonitorIndex][oldWsIndex].indexOf(windowId);
 
@@ -341,7 +349,7 @@ export default class Renderer {
             }
             else {
                 //log("window moved to another monitor");
-                let newWsIndex = (this.wsOnlyOnPrimary && newMonitorIndex !== this.mainMonitorIndex) ? 0 : oldWsIndex;
+                let newWsIndex = (this.wssOnlyOnPrimary && newMonitorIndex !== this.mainMonitorIndex) ? 0 : oldWsIndex;
                 let newWindowIndex = 0;
                 this.workspaceButtons.move_window_icon(oldMonitorIndex, oldWsIndex, oldWindowIndex, newMonitorIndex, newWsIndex, newWindowIndex);
                 this.winIdsContRepr[oldMonitorIndex][oldWsIndex].splice(oldWindowIndex, 1);
@@ -350,20 +358,21 @@ export default class Renderer {
         }));
         
 
-        // here, we're only concenred about focus changes on existing windows on the same monitor-workspace combo
-        // (this event triggers for other things too - when window is opened, or closed - or basically any time focus is changed - all of which is handled exclusively)
+        // Here, we're only concenred about focus changes of EXISTING windows on the SAME MONITOR AND WORKSPACE
         this.gnomeGlobalEventIdsObj["display"].push(global.display.connect("notify::focus-window", () => {
             let newlyFocusedWindowObj = global.display.focus_window;
-            //== Meta.WindowType.NORMAL
             if (!newlyFocusedWindowObj) return; // if last window in a workspace (empty workspace) is closed event will fire but there will be no focused window
+            if (newlyFocusedWindowObj.get_window_type() !== Meta.WindowType.NORMAL) return;
 
             let monitorIndex = newlyFocusedWindowObj.get_monitor();
+
             // this is the only way I found to display AltTab in the current monitor - overriding primaryMonitor
-            // this is what behind the scenes functions for AltTab and the methods it extends use
-            // I tried overriding the methods but it doesn't work because they're called directly by Clutter (I think it was in C) but this right here is how they decide which monitor to show AltTab on
+            // I tried overriding a bunch of functions and classes from AltTab WindowSwitcher and others but nothing worked
+            // This right here is not perfect as the "current monitor" is determined based on window focus (or when workspace buttons are clicked in their class)
+            // so it doesn't follow mouse cursor and you have to click on the monitor to change. I could add a function that tracks the pointer but then performance would take a hit and I don't think it's worth it
             Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[monitorIndex];
             let wsIndex = newlyFocusedWindowObj.get_workspace().index();
-            if (this.wsOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex) {
+            if (this.wssOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex) {
                 wsIndex = 0;
             }
 
@@ -397,7 +406,7 @@ export default class Renderer {
         for (let monitorIndex=0; monitorIndex<this.numMonitors; monitorIndex++) {
             // with workspaces only on primary enabled, the same windows (for the non-main monitors will appear in every workspace)
             // we only want to list them when getting the first workspace (wsIndex=0) as that's the only workspace they have
-            if (this.wsOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex && wsIndex > 0) {
+            if (this.wssOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex && wsIndex > 0) {
                 output.push(null);
             }
             else {
@@ -417,25 +426,37 @@ export default class Renderer {
         return output;
     }
 
-    // there is also a window-removed event but I don't care about it becaues I'm keeping my own accurate (at least should be) history
+    // used to detect when window move workspaces
+    // if triggered before window-left-monitor, this handler will also move the window the new monitor (and then window-left-monitor won't do anything) 
     _add_window_added_event_to_workspace(wsIndex) {
         let workspaceObject = global.workspace_manager.get_workspace_by_index(wsIndex);
+
         workspaceObject._windowAddedEventId = workspaceObject.connect('window-added', (workspaceObj, windowObj) => {
-            //log(`Window ${windowObj.get_title()} was added to workspace ${workspaceObj.index()}`);
-            // windows moved to another monitor always go to the front of the tab list (most recently focused)
-            let winIdsMeta = this._get_winIdsMeta();
+            //log("window added to workspace")
+
+            if (windowObj.get_window_type() !== Meta.WindowType.NORMAL) return;
 
             let windowId = windowObj.get_id();
-            if (winIdsMeta[windowId] === undefined) return; // new window opened - handled and properly placed by another event
+            let winIdsMeta = this._get_winIdsMeta();
 
-            let monitorIndex = winIdsMeta[windowId]["monitorIndex"];
+            if (winIdsMeta[windowId] === undefined) {
+                return; // new window opened - handled and properly placed by another event
+            }
+
+            let oldMonitorIndex = winIdsMeta[windowId]["monitorIndex"];
+            let newMonitorIndex = windowObj.get_monitor();
             let oldWsIndex = winIdsMeta[windowId]["wsIndex"];
-            let newWsIndex = workspaceObj.index();
-            let oldWindowIndex = this.winIdsContRepr[monitorIndex][oldWsIndex].indexOf(windowId);
+            let newWsIndex = (this.wssOnlyOnPrimary && newMonitorIndex !== this.mainMonitorIndex) ? 0 : workspaceObj.index();
+            
+            if (oldMonitorIndex === newMonitorIndex && oldWsIndex === newWsIndex) {
+                return; // nothing to do
+            }
+            
+            let oldWindowIndex = this.winIdsContRepr[oldMonitorIndex][oldWsIndex].indexOf(windowId);
 
-            this.workspaceButtons.move_window_icon(monitorIndex, oldWsIndex, oldWindowIndex, monitorIndex, newWsIndex, 0);
-            this.winIdsContRepr[monitorIndex][oldWsIndex].splice(oldWindowIndex, 1);
-            this.winIdsContRepr[monitorIndex][newWsIndex].unshift(windowId);
+            this.workspaceButtons.move_window_icon(oldMonitorIndex, oldWsIndex, oldWindowIndex, newMonitorIndex, newWsIndex, 0);
+            this.winIdsContRepr[oldMonitorIndex][oldWsIndex].splice(oldWindowIndex, 1);
+            this.winIdsContRepr[newMonitorIndex][newWsIndex].unshift(windowId);
         });
     }
 

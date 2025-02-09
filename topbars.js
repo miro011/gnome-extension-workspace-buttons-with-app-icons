@@ -4,22 +4,22 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
 export default class Topbars {
-    constructor() {
+    constructor(mainMonitorIndex) {
+        this.mainMonitorIndex = mainMonitorIndex;
         this._init();
     }
 
     _init() {
         this.containersArr = [];
-        this.mainMonitorIndex = Main.layoutManager.primaryMonitor.index;
     }
 
     destroy() {
         for (let i=0; i<this.containersArr.length; i++) {
             if (i === this.mainMonitorIndex) continue;
 
-            // Eject shared actors before destroying the container (otherwise destroy() is recursive and would wipe out the date and quick settings applets completely)
+            // Eject actors before destroying the container (otherwise destroy() is recursive and would wipe out the date and quick settings applets completely)
             this.containersArr[i].get_children().forEach(child => {
-                this.containersArr[i].remove_child(child); // Detaches the actor without destroying it
+                this.containersArr[i].remove_child(child);
             });
 
             this.containersArr[i].destroy();
@@ -31,7 +31,7 @@ export default class Topbars {
     //////////////////////////////////////
 
     add_topbar(monitorIndex) {
-        log(`Adding topbar for index ${monitorIndex}`);
+        //log(`Adding topbar for index ${monitorIndex}`);
         if (monitorIndex === this.mainMonitorIndex) {
             this.containersArr.push(Main.panel);
         }
