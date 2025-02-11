@@ -3,7 +3,6 @@
 import Meta from "gi://Meta";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Gio from "gi://Gio";
-import GLib from "gi://GLib";
 
 
 import Settings from "./settings.js";
@@ -18,7 +17,7 @@ export default class Renderer {
     }
 
     _init() {
-        //log("renderer => _init");
+        log("renderer => _init");
         this.extSettings = new Settings(this.extSettingsRealTimeObj, constants.extensionSettingsInfoObj);
         this.mutterSettingsRealTimeObj = new Gio.Settings({ schema: 'org.gnome.mutter' });
         this.mutterSettings = new Settings(this.mutterSettingsRealTimeObj, constants.mutterSettingsInfoObj);
@@ -135,19 +134,13 @@ export default class Renderer {
 
         id = this.mutterSettingsRealTimeObj.connect('changed::workspaces-only-on-primary', () => {
             this.destroy(false);
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this._init();
-                return GLib.SOURCE_REMOVE; // Ensures it only runs once
-            });
+            this._init();
         });
         this.mutterSettings.add_event_id(id);
 
         id = this.mutterSettingsRealTimeObj.connect('changed::dynamic-workspaces', () => {
             this.destroy(false);
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this._init();
-                return GLib.SOURCE_REMOVE; // Ensures it only runs once
-            });
+            this._init();
         });
         this.mutterSettings.add_event_id(id);
     }
@@ -156,13 +149,15 @@ export default class Renderer {
         this.gnomeMainEventIdsObj["layoutManager"].push(Main.layoutManager.connect('monitors-changed', () => {
             //log("monitors-changed");
             this.destroy(false, false); // don't wanna change back to the old (saved) primary. If primary monitor was changed it could be different. Other monitor operations (add, remove) may re-write it either - I haven't tested that
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this._init();
-                return GLib.SOURCE_REMOVE; // Ensures it only runs once
-            });
+            this._init();
         }));
 
         this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("active-workspace-changed", () => {
+            if (this.wssOnlyOnPrimary) {
+                // fixes a bug where when workspaces is only on primary and workspace is switched while the non-primary monitor is focused, the workspace switched to has the window from the pvevious workspace (on the main monitor)
+                // this happens exactly because when the other monitor is focused this extension overwrites Main.layoutManager.primaryMonitor - so we just need to restore it
+                Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[this.mainMonitorIndex];
+            }
             this.workspaceButtons.update_active_workspace();
         }));
 
