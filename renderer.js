@@ -17,7 +17,7 @@ export default class Renderer {
     }
 
     _init() {
-        log("renderer => _init");
+        //log("renderer => _init");
         this.extSettings = new Settings(this.extSettingsRealTimeObj, constants.extensionSettingsInfoObj);
         this.mutterSettingsRealTimeObj = new Gio.Settings({ schema: 'org.gnome.mutter' });
         this.mutterSettings = new Settings(this.mutterSettingsRealTimeObj, constants.mutterSettingsInfoObj);
