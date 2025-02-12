@@ -3,6 +3,7 @@
 import Meta from "gi://Meta";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Gio from "gi://Gio";
+import GLib from "gi://GLib";
 
 
 import Settings from "./settings.js";
@@ -299,12 +300,13 @@ export default class Renderer {
         }));
 
         this.gnomeGlobalEventIdsObj["display"].push(global.display.connect('window-created', (display, windowObj) => {
-            if (windowObj.get_window_type() !== Meta.WindowType.NORMAL) return;
+            if (!this._is_valid_tab_list_window(windowObj)) return;
             //log("window created");
 
             let windowId = windowObj.get_id();
             let monitorIndex = windowObj.get_monitor();
             let wsIndex = windowObj.get_workspace().index();
+            // corrent wsIndex to accomodate workspaces only on primary
             if (this.wssOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex) {
                 wsIndex = 0;
             }
@@ -313,20 +315,43 @@ export default class Renderer {
             this.winIdsContRepr[monitorIndex][wsIndex].unshift(windowId);
             this.workspaceButtons.add_window_icon("l", windowObj, monitorIndex, wsIndex);
             //log("added icon to container (may take a bit to show)");
+
+            // Add a small delay to allow time for the app object to populate - for XWayland apps on Wayland
+            // With those initially the normal check will pass but it's not a normal app in reality because the population of the windowObj is delayed
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extSettings.get("wsb-generate-window-icon-timeout"), () => {
+                if (windowObj && windowObj.get_workspace() !== null && !this._is_valid_tab_list_window(windowObj)) {
+                    // figure out where it is, assuming it somehow moved during the delay (picked by another event or something like added to workspace, left monitor etc. before updating the object)
+                    let monitorIndex2 = windowObj.get_monitor();
+                    let wsIndex2 = windowObj.get_workspace().index();
+                    if (this.wssOnlyOnPrimary && monitorIndex2 !== this.mainMonitorIndex) {
+                        wsIndex2 = 0;
+                    }
+                    let windowIndex = this.winIdsContRepr[monitorIndex2][wsIndex2].indexOf(windowId);
+                    if (windowIndex !== -1) {
+                        // remove it
+                        this.workspaceButtons.remove_window_icon(monitorIndex2, wsIndex2, windowIndex);
+                        this.winIdsContRepr[monitorIndex2][wsIndex2].splice(windowIndex, 1);
+                    }
+                }
+
+                return GLib.SOURCE_REMOVE;
+            });
         }));
 
         // a window leaves a monitor if it's a/ closed or b/ moved to another monitor
         // when moved to another monitor, it is possible to also be moved to another workspace, but we don't care about that - we just move it to the monitor
         // note that if the window-added (to workspace) event triggers before this one, it will move it to both the right workspace and monitor, and this function will return because everything matches
         this.gnomeGlobalEventIdsObj["display"].push(global.display.connect('window-left-monitor', (display, oldMonitorIndex, windowObj) => {
-            if (windowObj.get_window_type() !== Meta.WindowType.NORMAL) return;
-
+            // don't want to check normal here in case a not normal window posing as normal (beore window object fully loading on wayland under xwayland)
             //log("window left monitor");
 
             let winIdsMeta = this._get_winIdsMeta();
             
             let newMonitorIndex = windowObj.get_monitor(); // if window was closed this returns -1
             let windowId = windowObj.get_id();
+            if (winIdsMeta[windowId] === undefined) {
+                return;
+            }
             let oldSavedMonitorIndex = winIdsMeta[windowId]["monitorIndex"];
 
             // if window entered workspace triggers before this event, it has already moved it to the right monitor, so have nothing left to do
@@ -357,7 +382,6 @@ export default class Renderer {
         this.gnomeGlobalEventIdsObj["display"].push(global.display.connect("notify::focus-window", () => {
             let newlyFocusedWindowObj = global.display.focus_window;
             if (!newlyFocusedWindowObj) return; // if last window in a workspace (empty workspace) is closed event will fire but there will be no focused window
-            if (newlyFocusedWindowObj.get_window_type() !== Meta.WindowType.NORMAL) return;
 
             let monitorIndex = newlyFocusedWindowObj.get_monitor();
 
@@ -366,6 +390,7 @@ export default class Renderer {
             // This right here is not perfect as the "current monitor" is determined based on window focus (or when workspace buttons are clicked in their class)
             // so it doesn't follow mouse cursor and you have to click on the monitor to change. I could add a function that tracks the pointer but then performance would take a hit and I don't think it's worth it
             Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[monitorIndex];
+
             let wsIndex = newlyFocusedWindowObj.get_workspace().index();
             if (this.wssOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex) {
                 wsIndex = 0;
@@ -429,8 +454,6 @@ export default class Renderer {
         workspaceObject._windowAddedEventId = workspaceObject.connect('window-added', (workspaceObj, windowObj) => {
             //log("window added to workspace")
 
-            if (windowObj.get_window_type() !== Meta.WindowType.NORMAL) return;
-
             let windowId = windowObj.get_id();
             let winIdsMeta = this._get_winIdsMeta();
 
@@ -475,6 +498,10 @@ export default class Renderer {
         }
     
         return winIdsMeta;
+    }
+
+    _is_valid_tab_list_window(windowObj) {
+        return windowObj.get_window_type() === Meta.WindowType.NORMAL && windowObj.is_skip_taskbar() === false && windowObj.get_transient_for() === null;
     }
 
     _debug_log_structures() {

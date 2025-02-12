@@ -215,6 +215,8 @@ export default class WorkspaceButtons {
                 let placeholderIcon = new St.Icon({ icon_name: 'image-missing-symbolic', icon_size: this.extSettings.get('wsb-icon-size') });
                 windowIconWrapperElem.add_child(placeholderIcon);
             }
+
+            return GLib.SOURCE_REMOVE;
         });
     
         return windowIconWrapperElem;
