@@ -35,6 +35,7 @@ export default class Renderer {
 
         this.gnomeGlobalEventIdsObj = {"display": [], "workspace_manager": []};
         this.gnomeMainEventIdsObj = {"layoutManager": []};
+        this.glibTimeoutIdsSet = new Set();
         
         this._initial_population();
         this._enable_settings_events();
@@ -73,6 +74,12 @@ export default class Renderer {
             }
         }
         this.gnomeGlobalEventIdsObj = null;
+
+        for (let timeoutId of this.glibTimeoutIdsSet) {
+            GLib.Source.remove(timeoutId);
+        }
+        this.glibTimeoutIdsSet.clear();
+        this.glibTimeoutIdsSet = null;
         
         // for the workspaces that remain, we wanna clean up the window added event
         for (let wsIndex=0; wsIndex<global.workspace_manager.get_n_workspaces(); wsIndex++) {
@@ -318,7 +325,7 @@ export default class Renderer {
 
             // Add a small delay to allow time for the app object to populate - for XWayland apps on Wayland
             // With those initially the normal check will pass but it's not a normal app in reality because the population of the windowObj is delayed
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extSettings.get("wsb-generate-window-icon-timeout"), () => {
+            let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extSettings.get("wsb-generate-window-icon-timeout"), () => {
                 if (windowObj && windowObj.get_workspace() !== null && !this._is_valid_tab_list_window(windowObj)) {
                     // figure out where it is, assuming it somehow moved during the delay (picked by another event or something like added to workspace, left monitor etc. before updating the object)
                     let monitorIndex2 = windowObj.get_monitor();
@@ -334,8 +341,11 @@ export default class Renderer {
                     }
                 }
 
+                this.glibTimeoutIdsSet.delete(timeoutId);
                 return GLib.SOURCE_REMOVE;
             });
+
+            this.glibTimeoutIdsSet.add(timeoutId);
         }));
 
         // a window leaves a monitor if it's a/ closed or b/ moved to another monitor

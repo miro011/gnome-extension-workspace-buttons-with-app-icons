@@ -22,6 +22,7 @@ export default class WorkspaceButtons {
 
     _init() {
         this.containersArr = [];
+        this.glibTimeoutIdsSet = new Set();
         this._enable_settings_events();
     }
 
@@ -29,6 +30,12 @@ export default class WorkspaceButtons {
         this.containersArr.forEach(container => {
             container.destroy();
         });
+        for (let timeoutId of this.glibTimeoutIdsSet) {
+            GLib.Source.remove(timeoutId);
+        }
+        this.glibTimeoutIdsSet.clear();
+        this.glibTimeoutIdsSet = null;
+        
         this.containersArr = null;
         this.extSettingsRealTimeObj = null;
         this.extSettings = null;
@@ -200,7 +207,7 @@ export default class WorkspaceButtons {
         windowIconWrapperElem.windowId = windowObj.get_id();
     
         // Add a small delay to allow time for the app's icon to load properly, especially for XWayland (GTK3) apps
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extSettings.get("wsb-generate-window-icon-timeout"), () => {
+        let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extSettings.get("wsb-generate-window-icon-timeout"), () => {
             let appObj = Shell.WindowTracker.get_default().get_window_app(windowObj);
     
             // If the appObj is valid, add the icon texture
@@ -216,8 +223,11 @@ export default class WorkspaceButtons {
                 windowIconWrapperElem.add_child(placeholderIcon);
             }
 
+            this.glibTimeoutIdsSet.delete(timeoutId);
             return GLib.SOURCE_REMOVE;
         });
+
+        this.glibTimeoutIdsSet.add(timeoutId);
     
         return windowIconWrapperElem;
     }
