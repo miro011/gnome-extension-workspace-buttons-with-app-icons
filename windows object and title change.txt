@@ -1,0 +1,13 @@
+title change event:
+
+let allWindows = global.display.get_tab_list(Meta.TabList.NORMAL, null);
+
+allWindows.forEach(window => {
+    window.connect('notify::title', (win) => {
+        log(`Window title changed for ${win.wm_class}: ${win.title}`);
+    });
+});
+
+
+
+append all of them for all workspaces - on workspace switch - make the ones for the other workspace display:none (directly on the wrapper for that workspace), add notify::title events only to the window buttons in the current workspace

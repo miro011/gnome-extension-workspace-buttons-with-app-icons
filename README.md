@@ -10,6 +10,9 @@ Removes the original workspaces (activities) indicator and replaces it with butt
   - App icons are ordered based on most recently used (same order as the Alt+Tab switch window menu).
   - Note: When you first enable the extension and you already have windows opened, the order may not reflect this because it won't know the order yet. Once you start switching between them, it will arrange them properly.
 
+- **Efficiency**
+  - Instead of constantly recalculating everything, this extension exclusively detects small changes (window opened, closed, moved etc.) one at a time, and updates only the affected sub-part of the UI. This avoids unnecessary computation and boosts performance significantly.
+
 - **Scroll (anywhere within the container):**
   - Switch workspace (up = left / down = right).
   
