@@ -109,7 +109,12 @@ export default class WorkspaceButtons {
             let btnPressed = event.get_button();
     
             if (btnPressed === Clutter.BUTTON_PRIMARY) {
-                global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
+                if (actor.wsIndex === global.workspace_manager.get_active_workspace_index()) {
+                    Main.overview.toggle();
+                }
+                else {
+                    global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
+                }
             }
             else if (btnPressed === Clutter.BUTTON_SECONDARY && !this.rendererInst.extensionInst.extSettings.get("wsb-right-click-ignores-clicked-workspace")) {
                 global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
