@@ -4,7 +4,6 @@ import Shell from "gi://Shell";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as AltTab from "resource:///org/gnome/shell/ui/altTab.js";
 import Clutter from "gi://Clutter";
-import GLib from "gi://GLib";
 
 // this.rendererInst
 
@@ -19,7 +18,6 @@ export default class WorkspaceButtons {
 
     _init() {
         this.containersArr = [];
-        this.glibTimeoutIdsSet = new Set();
         this._enable_settings_events();
     }
 
@@ -27,11 +25,6 @@ export default class WorkspaceButtons {
         this.containersArr.forEach(container => {
             container.destroy();
         });
-        for (let timeoutId of this.glibTimeoutIdsSet) {
-            GLib.Source.remove(timeoutId);
-        }
-        this.glibTimeoutIdsSet.clear();
-        this.glibTimeoutIdsSet = null;
 
         this.rendererInst = null;
         
@@ -190,29 +183,19 @@ export default class WorkspaceButtons {
     _get_new_window_icon(windowObj) {
         let windowIconWrapperElem = new St.BoxLayout({ style_class: "wsb-single-icon-wrapper" });
         windowIconWrapperElem.windowId = windowObj.get_id();
-    
-        // Add a small delay to allow time for the app's icon to load properly, especially for XWayland (GTK3) apps
-        let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.rendererInst.extensionInst.extSettings.get("wsb-generate-window-icon-timeout"), () => {
-            let appObj = Shell.WindowTracker.get_default().get_window_app(windowObj);
-    
-            // If the appObj is valid, add the icon texture
-            if (appObj) {
-                let appIcon = appObj.create_icon_texture(this.rendererInst.extensionInst.extSettings.get('wsb-ws-app-icon-size'));
-                if (this.rendererInst.extensionInst.extSettings.get("wsb-ws-app-icons-desaturate")) {
-                    appIcon.add_effect(new Clutter.DesaturateEffect());
-                }
-                windowIconWrapperElem.add_child(appIcon);
-            } else {
-                // Fallback icon if the appObj is not found
-                let placeholderIcon = new St.Icon({ icon_name: 'image-missing-symbolic', icon_size: this.rendererInst.extensionInst.extSettings.get('wsb-ws-app-icon-size') });
-                windowIconWrapperElem.add_child(placeholderIcon);
+        let appObj = Shell.WindowTracker.get_default().get_window_app(windowObj);
+        // If the appObj is valid, add the icon texture
+        if (appObj) {
+            let appIcon = appObj.create_icon_texture(this.rendererInst.extensionInst.extSettings.get('wsb-ws-app-icon-size'));
+            if (this.rendererInst.extensionInst.extSettings.get("wsb-ws-app-icons-desaturate")) {
+                appIcon.add_effect(new Clutter.DesaturateEffect());
             }
-
-            this.glibTimeoutIdsSet.delete(timeoutId);
-            return GLib.SOURCE_REMOVE;
-        });
-
-        this.glibTimeoutIdsSet.add(timeoutId);
+            windowIconWrapperElem.add_child(appIcon);
+        } else {
+            // Fallback icon if the appObj is not found
+            let placeholderIcon = new St.Icon({ icon_name: 'image-missing-symbolic', icon_size: this.rendererInst.extensionInst.extSettings.get('wsb-ws-app-icon-size') });
+            windowIconWrapperElem.add_child(placeholderIcon);
+        }
     
         return windowIconWrapperElem;
     }

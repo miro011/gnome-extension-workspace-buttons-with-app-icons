@@ -305,45 +305,29 @@ export default class Renderer {
         }));
 
         this.gnomeGlobalEventIdsObj["display"].push(global.display.connect('window-created', (display, windowObj) => {
-            if (!this._is_valid_tab_list_window(windowObj)) return;
-            //log("window created");
-
             let windowId = windowObj.get_id();
             let monitorIndex = windowObj.get_monitor();
             let wsIndex = windowObj.get_workspace().index();
+            let workspaceObj = global.workspace_manager.get_workspace_by_index(wsIndex);
             // corrent wsIndex to accomodate workspaces only on primary
             if (this.wssOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex) {
                 wsIndex = 0;
             }
 
-            //log(`adding new window with id ${windowId} to winIdsContRepr`);
-            this.winIdsContRepr[monitorIndex][wsIndex].unshift(windowId);
-            this.workspaceButtons.add_window_icon("l", windowObj, monitorIndex, wsIndex);
-            //log("added icon to container (may take a bit to show)");
-
-            // Add a small delay to allow time for the app object to populate - for XWayland apps on Wayland
-            // With those initially the normal check will pass but it's not a normal app in reality because the population of the windowObj is delayed
-            let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extensionInst.extSettings.get("wsb-generate-window-icon-timeout"), () => {
-                if (windowObj && windowObj.get_workspace() !== null && !this._is_valid_tab_list_window(windowObj)) {
-                    // figure out where it is, assuming it somehow moved during the delay (picked by another event or something like added to workspace, left monitor etc. before updating the object)
-                    let monitorIndex2 = windowObj.get_monitor();
-                    let wsIndex2 = windowObj.get_workspace().index();
-                    if (this.wssOnlyOnPrimary && monitorIndex2 !== this.mainMonitorIndex) {
-                        wsIndex2 = 0;
-                    }
-                    let windowIndex = this.winIdsContRepr[monitorIndex2][wsIndex2].indexOf(windowId);
-                    if (windowIndex !== -1) {
-                        // remove it
-                        this.workspaceButtons.remove_window_icon(monitorIndex2, wsIndex2, windowIndex);
-                        this.winIdsContRepr[monitorIndex2][wsIndex2].splice(windowIndex, 1);
-                    }
+            for (let windowObj of global.display.get_tab_list(Meta.TabList.NORMAL, workspaceObj)) {
+                if (windowObj.get_id() === windowId) {
+                    let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extensionInst.extSettings.get("wsb-generate-window-icon-timeout"), () => {
+                        this.winIdsContRepr[monitorIndex][wsIndex].unshift(windowId);
+                        this.workspaceButtons.add_window_icon("l", windowObj, monitorIndex, wsIndex);
+    
+                        this.glibTimeoutIdsSet.delete(timeoutId);
+                        return GLib.SOURCE_REMOVE;
+                    });
+        
+                    this.glibTimeoutIdsSet.add(timeoutId);
+                    break;
                 }
-
-                this.glibTimeoutIdsSet.delete(timeoutId);
-                return GLib.SOURCE_REMOVE;
-            });
-
-            this.glibTimeoutIdsSet.add(timeoutId);
+            }
         }));
 
         // a window leaves a monitor if it's a/ closed or b/ moved to another monitor
