@@ -4,8 +4,8 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
 export default class Topbars {
-    constructor(mainMonitorIndex) {
-        this.mainMonitorIndex = mainMonitorIndex;
+    constructor(rendererInst) {
+        this.rendererInst = rendererInst;
         this._init();
     }
 
@@ -15,7 +15,7 @@ export default class Topbars {
 
     destroy() {
         for (let i=0; i<this.containersArr.length; i++) {
-            if (i === this.mainMonitorIndex) continue;
+            if (i === this.rendererInst.mainMonitorIndex) continue;
 
             // Eject actors before destroying the container (otherwise destroy() is recursive and would wipe out the date and quick settings applets completely)
             this.containersArr[i].get_children().forEach(child => {
@@ -25,14 +25,14 @@ export default class Topbars {
             this.containersArr[i].destroy();
         }
         this.containersArr = null;
-        this.mainMonitorIndex = null;
+        this.rendererInst = null;
     }
 
     //////////////////////////////////////
 
     add_topbar(monitorIndex) {
         //log(`Adding topbar for index ${monitorIndex}`);
-        if (monitorIndex === this.mainMonitorIndex) {
+        if (monitorIndex === this.rendererInst.mainMonitorIndex) {
             this.containersArr.push(Main.panel);
         }
         else {

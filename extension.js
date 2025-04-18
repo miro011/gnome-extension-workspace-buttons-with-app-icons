@@ -1,17 +1,19 @@
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as AltTab from "resource:///org/gnome/shell/ui/altTab.js";
+const { Gtk, Gio, Gdk } = imports.gi;
+
 
 import Renderer from "./renderer.js";
 
 export default class WorkspaceIndicatorExtension extends Extension {
     enable() {
         Main.panel.statusArea['activities']?.hide();
-        let dateMenu = Main.panel.statusArea.dateMenu;
+        /*let dateMenu = Main.panel.statusArea.dateMenu;
         if (dateMenu) {
             Main.panel._centerBox.remove_child(dateMenu.container);
             Main.panel._rightBox.add_child(dateMenu.container);
-        }
+        }*/
     
         // Override _getWindowList to only get windows from current monitor
         this.originalGetWindowListFunc = AltTab.WindowSwitcherPopup.prototype._getWindowList;
@@ -24,18 +26,17 @@ export default class WorkspaceIndicatorExtension extends Extension {
             return windows;
         };
         
-
         this.extSettingsRealTimeObj = this.getSettings();
-        this.renderer = new Renderer(this.extSettingsRealTimeObj);
+        this.renderer = new Renderer(this);
     }
 
     disable() {
         Main.panel.statusArea['activities']?.show();
-        let dateMenu = Main.panel.statusArea.dateMenu;
+        /*let dateMenu = Main.panel.statusArea.dateMenu;
         if (dateMenu) {
             Main.panel._rightBox.remove_child(dateMenu.container);
             Main.panel._centerBox.insert_child_at_index(dateMenu.container, -1);
-        }
+        }*/
 
         // Restore the original _getWindowList method
         AltTab.WindowSwitcherPopup.prototype._getWindowList = this.originalGetWindowListFunc;

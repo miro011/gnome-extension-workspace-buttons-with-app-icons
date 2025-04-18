@@ -1,0 +1,52 @@
+/* .wsb-container-wrapper {
+} */
+
+.wsb-ws-btn-wrapper {
+    margin-right: {{wsb-ws-btn-spacing}}px;
+    padding: {{wsb-ws-btn-vert-spacing}}px 0 {{wsb-ws-btn-vert-spacing}}px 0;
+}
+
+.wsb-container-wrapper .wsb-ws-btn-wrapper:last-child {
+    margin-right: 0;
+}
+
+.wsb-ws-num-wrapper {
+    background-color: {{wsb-ws-num-inactive-color}};
+    border-radius: {{wsb-ws-btn-roundness}}px 0 0 {{wsb-ws-btn-roundness}}px;
+    padding: 0 {{wsb-ws-num-spacing}}px 0 {{wsb-ws-num-spacing}}px;
+}
+
+.wsb-ws-num-wrapper-active {
+    background-color: {{wsb-ws-num-active-color}};
+}
+
+.wsb-ws-num-label-elem {
+    font-size: {{wsb-ws-num-font-size}}px;
+}
+
+.wsb-icons-wrapper {
+    background-color: {{wsb-ws-app-icons-wrapper-inactive-color}};
+    padding: 0 {{wsb-ws-app-icons-wrapper-spacing}}px 0 {{wsb-ws-app-icons-wrapper-spacing}}px;
+}
+
+.wsb-icons-wrapper-active {
+    background-color: {{wsb-ws-app-icons-wrapper-active-color}};
+}
+
+.wsb-icons-wrapper-full-ws-btn-width {
+    min-width: {{wsb-ws-app-icon-size}}px;
+    border-radius: {{wsb-ws-btn-roundness}}px {{wsb-ws-btn-roundness}}px {{wsb-ws-btn-roundness}}px {{wsb-ws-btn-roundness}}px;
+}
+
+.wsb-icons-wrapper-with-ws-nums {
+    min-width: {{wsb-ws-app-icon-size-half}}px;
+    border-radius: 0 {{wsb-ws-btn-roundness}}px {{wsb-ws-btn-roundness}}px 0;
+}
+
+.wsb-single-icon-wrapper {
+    margin-right: {{wsb-ws-app-icon-spacing}}px;
+}
+
+.wsb-icons-wrapper .wsb-single-icon-wrapper:last-child {
+    margin-right: 0;
+}

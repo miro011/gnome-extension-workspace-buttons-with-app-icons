@@ -6,11 +6,15 @@
     // it is updated any time a change to a setting in realTimeObj occurs
 // eventIdsArr as the title suggests holds the event ids for all events mapped to the realTimeObj
 
+import * as styler from "./styler.js";
+
 export default class Settings {
     // Set instance variables to params provided
-    constructor(realTimeObj, infoObj) {
+    constructor(realTimeObj, infoObj, rendererInst=null) {
         this.realTimeObj = realTimeObj;
         this.infoObj = infoObj;
+        this.rendererInst = rendererInst;
+        this.isExtensionSettings = (rendererInst===null) ? false : true;
         this._init();
     }
 
@@ -21,6 +25,9 @@ export default class Settings {
         for (let settingName in this.infoObj) {
             this._update_static_setting(settingName);
             this._add_update_static_settings_event(settingName);
+            if (this.isExtensionSettings) {
+                this._add_style_update_event(settingName);
+            }
         }
     }
 
@@ -32,6 +39,8 @@ export default class Settings {
 
         this.realTimeObj = null;
         this.infoObj = null;
+        this.rendererInst = null;
+        this.isExtensionSettings = null;
         this.staticObj = null;
     }
 
@@ -50,6 +59,13 @@ export default class Settings {
     _add_update_static_settings_event(settingName) {
         let eventId = this.realTimeObj.connect(`changed::${settingName}`, ()=>{
             this._update_static_setting(settingName);
+        });
+        this.eventIdsArr.push(eventId);
+    }
+
+    _add_style_update_event(settingName) {
+        let eventId = this.realTimeObj.connect(`changed::${settingName}`, ()=>{
+            styler.update_style(this.rendererInst);
         });
         this.eventIdsArr.push(eventId);
     }

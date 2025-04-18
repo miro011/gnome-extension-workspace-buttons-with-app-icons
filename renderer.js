@@ -10,16 +10,17 @@ import Settings from "./settings.js";
 import * as constants from "./constants.js";
 import WorkspaceButtons from "./workspace-buttons.js";
 import Topbars from "./topbars.js";
+import * as styler from "./styler.js";
 
 export default class Renderer {
-    constructor(extSettingsRealTimeObj) {
-        this.extSettingsRealTimeObj = extSettingsRealTimeObj;
+    constructor(extensionInst) {
+        this.extensionInst = extensionInst;
         this._init();
     }
 
     _init() {
         //log("renderer => _init");
-        this.extSettings = new Settings(this.extSettingsRealTimeObj, constants.extensionSettingsInfoObj);
+        this.extSettings = new Settings(this.extensionInst.extSettingsRealTimeObj, constants.extensionSettingsInfoObj, this);
         this.mutterSettingsRealTimeObj = new Gio.Settings({ schema: 'org.gnome.mutter' });
         this.mutterSettings = new Settings(this.mutterSettingsRealTimeObj, constants.mutterSettingsInfoObj);
 
@@ -30,8 +31,8 @@ export default class Renderer {
         this.mainMonitorIndex = Main.layoutManager.primaryMonitor.index;
         //log(`mainMonitorIndex=${this.mainMonitorIndex}`);
 
-        this.topbars = new Topbars(this.mainMonitorIndex);
-        this.workspaceButtons = new WorkspaceButtons(this.extSettingsRealTimeObj, this.extSettings, this.winIdsContRepr, this.wssOnlyOnPrimary, this.mainMonitorIndex);
+        this.topbars = new Topbars(this);
+        this.workspaceButtons = new WorkspaceButtons(this);
 
         this.gnomeGlobalEventIdsObj = {"display": [], "workspace_manager": []};
         this.gnomeMainEventIdsObj = {"layoutManager": []};
@@ -40,13 +41,15 @@ export default class Renderer {
         this._initial_population();
         this._enable_settings_events();
         this._enable_gnome_events();
+
+        styler.update_style(this);
     }
 
     destroy(full=true, restorePrimaryMonitor=true) {
         this.extSettings.destroy();
         this.extSettings = null;
         if (full===true) {
-            this.extSettingsRealTimeObj = null;
+            this.extensionInst = null;
         }
         this.mutterSettings.destroy();
         this.mutterSettings = null;

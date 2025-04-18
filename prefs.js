@@ -7,42 +7,42 @@ import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/
 export default class Prefs extends ExtensionPreferences {
 
     fillPreferencesWindow(window) {
-        let settings = this.getSettings();
-
-        let workspaceButtonsPage = new Adw.PreferencesPage();
-
-
         let group;
         let rowsArr;
 
-        group = new Adw.PreferencesGroup({title: _('BUTTONS'),});
+        let settings = this.getSettings();
+
+
+        let workspaceButtonsPage = new Adw.PreferencesPage({title: 'STYLE: Workspace Buttons'});
+
+        group = new Adw.PreferencesGroup({title: _('Workspace Buttons'),});
         rowsArr = [
-            this.get_int_spin_row(settings, 'wsb-button-spacing', 'Spacing', 'Set the spacing (right margin) between the workspace buttons', 0, 50),
-            this.get_int_spin_row(settings, 'wsb-button-padding', 'Padding', 'Set the spacing inside the workspace buttons - aka padding', 0, 50),
-            this.get_int_spin_row(settings, 'wsb-button-roundness', 'Roundness', 'Set how round the should buttons be - aka border radius', 0, 50),
-            this.get_color_picker_row(settings, 'wsb-active-button-background-color', 'Active Background Color', 'Set the background color of the active workspace button'),
-            this.get_color_picker_row(settings, 'wsb-inactive-button-background-color', 'Inactive Background Color', 'Set the background color of inactive workspace buttons')
+            this.get_int_spin_row(settings, 'wsb-ws-btn-spacing', 'Distance Between Buttons', '', 0, 50),
+            this.get_int_spin_row(settings, 'wsb-ws-btn-vert-spacing', 'Space On Top and Bottom', '', 0, 50),
+            this.get_int_spin_row(settings, 'wsb-ws-btn-roundness', 'Roundness', '', 0, 50)
         ];
         for (let row of rowsArr) group.add(row);
         workspaceButtonsPage.add(group);
 
-        group = new Adw.PreferencesGroup({title: _('NUMBERS'),});
+        group = new Adw.PreferencesGroup({title: _('Numbers Section'),});
         rowsArr = [
-            this.get_toggle_row(settings, 'wsb-show-workspace-number', 'Show?', 'You can hide the numbers to save some space'),
-            this.get_int_spin_row(settings, 'wsb-number-font-size', 'Font Size', 'Set the font size of the workspace numbers', 5, 100),
-            this.get_int_spin_row(settings, 'wsb-number-horizontal-padding', 'Horizontal Padding', 'Set the space allocated to the left and right of the number (padding)', 0, 100),
-            this.get_color_picker_row(settings, 'wsb-active-workspace-number-background-color', 'Active Background Color', 'Set the background color of the number for the active workspace'),
-            this.get_color_picker_row(settings, 'wsb-inactive-workspace-number-background-color', 'Inactive Background Color', 'Set the background color of inactive workspace/s number')
+            this.get_toggle_row(settings, 'wsb-ws-num-show', 'Show?', ''),
+            this.get_int_spin_row(settings, 'wsb-ws-num-font-size', 'Font Size', '', 5, 100),
+            this.get_int_spin_row(settings, 'wsb-ws-num-spacing', 'Spacing (Horizontal)', 'The space to the left and right of the number', 0, 100),
+            this.get_color_picker_row(settings, 'wsb-ws-num-active-color', 'Active Background Color', 'Set the background color of the number for the active workspace'),
+            this.get_color_picker_row(settings, 'wsb-ws-num-inactive-color', 'Inactive Background Color', 'Set the background color of inactive workspace/s number')
         ];
         for (let row of rowsArr) group.add(row);
         workspaceButtonsPage.add(group);
 
-        group = new Adw.PreferencesGroup({title: _('ICONS'),});
+        group = new Adw.PreferencesGroup({title: _('Icons Section'),});
         rowsArr = [
-            this.get_int_spin_row(settings, 'wsb-icon-size', 'Icon Size', 'Set the size of the app icons', 5, 100),
-            this.get_int_spin_row(settings, 'wsb-icon-spacing', 'Icon Spacing', 'Set the spacing (right margin) between the icons shown in each workspace', 0, 50),
-            this.get_int_spin_row(settings, 'wsb-icons-wrapper-horizontal-padding', 'Icon Wrapper Horizontal Padding', 'The space between the left-most icon and the left-side of the workspace button, and right-most icon and the right side of the workspace button.', 0, 50),
-            this.get_toggle_row(settings, 'wsb-desaturate-icons', 'Desaturate?', 'Whether to desaturate the window icons.')
+            this.get_int_spin_row(settings, 'wsb-ws-app-icon-size', 'Icon Size', '', 5, 100),
+            this.get_int_spin_row(settings, 'wsb-ws-app-icon-spacing', 'Distance Between Icons', '', 0, 50),
+            this.get_int_spin_row(settings, 'wsb-ws-app-icons-wrapper-spacing', 'Space Left/Right Of Icons Wrapper', 'The space left and right of all icons as a whole', 0, 50),
+            this.get_toggle_row(settings, 'wsb-ws-app-icons-desaturate', 'Desaturate?', ''),
+            this.get_color_picker_row(settings, 'wsb-ws-app-icons-wrapper-active-color', 'Active Background Color', ''),
+            this.get_color_picker_row(settings, 'wsb-ws-app-icons-wrapper-inactive-color', 'Inactive Background Color', '')
         ];
         for (let row of rowsArr) group.add(row);
         workspaceButtonsPage.add(group);

@@ -1,74 +1,79 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="gnome-shell-extensions">
   <schema path="/org/gnome/shell/extensions/workspace-buttons-with-app-icons/" id="org.gnome.shell.extensions.workspace-buttons-with-app-icons">
-    <key type="i" name="wsb-button-spacing">
-        <default>2</default>
-        <summary>The spacing between the workspace buttons (pixels)</summary>
+    <key type="i" name="wsb-ws-btn-spacing">
+        <default>5</default>
+        <summary>The space between the workspace buttons (pixels)</summary>
         <description></description>
     </key>
-    <key type="i" name="wsb-button-padding">
-        <default>3</default>
-        <summary>The spacing inside the workspace buttons - aka padding - (pixels)</summary>
+    <key type="i" name="wsb-ws-btn-vert-spacing">
+        <default>1</default>
+        <summary>The vertical space between the buttons and the panel (pixels)</summary>
         <description></description>
     </key>
-    <key type="i" name="wsb-button-roundness">
+    <key type="i" name="wsb-ws-btn-roundness">
         <default>8</default>
         <summary>How round should the buttons be - aka border radius - (pixels)</summary>
         <description></description>
     </key>
-    <key type="b" name="wsb-show-workspace-number">
-      <default>true</default>
-      <summary>Whether to show the workspace number all the time</summary>
-      <description></description>
-    </key>
-    <key type="i" name="wsb-number-font-size">
-      <default>18</default>
-      <summary>The size of the workspace number (pixels)</summary>
-      <description></description>
-    </key>
-    <key type="i" name="wsb-number-horizontal-padding">
-      <default>4</default>
-      <summary>The padding from the workspace number left and right (pixels)</summary>
-      <description></description>
-    </key>
-    <key type="i" name="wsb-icon-size">
-      <default>26</default>
-      <summary>The size of each icon (pixels)</summary>
-      <description></description>
-    </key>
-    <key type="i" name="wsb-icon-spacing">
-      <default>0</default>
-      <summary>The spacing between the icons in each workspace button (pixels)</summary>
-      <description></description>
-    </key>
-    <key type="i" name="wsb-icons-wrapper-horizontal-padding">
-      <default>5</default>
-      <summary>The space left and right of all the icons as a whole.</summary>
-      <description></description>
-    </key>
-    <key type="b" name="wsb-desaturate-icons">
-      <default>false</default>
-      <summary>Desaturate icons</summary>
-      <description></description>
-    </key>
-    <key type="s" name="wsb-active-button-background-color">
+    <key type="s" name="wsb-ws-app-icons-wrapper-active-color">
       <default>"#273600"</default>
       <summary>The background color of the inactive workspace button</summary>
       <description></description>
     </key>
-    <key type="s" name="wsb-inactive-button-background-color">
+    <key type="s" name="wsb-ws-app-icons-wrapper-inactive-color">
       <default>"#241f31"</default>
       <summary>The background color of the inactive workspace button</summary>
       <description></description>
     </key>
-    <key type="s" name="wsb-active-workspace-number-background-color">
+    <key type="b" name="wsb-ws-num-show">
+      <default>true</default>
+      <summary>Whether to show the workspace number all the time</summary>
+      <description></description>
+    </key>
+    <key type="i" name="wsb-ws-num-font-size">
+      <default>18</default>
+      <summary>The size of the workspace number (pixels)</summary>
+      <description></description>
+    </key>
+    <key type="i" name="wsb-ws-num-spacing">
+      <default>4</default>
+      <summary>The padding from the workspace number left and right (pixels)</summary>
+      <description></description>
+    </key>
+    <key type="s" name="wsb-ws-num-active-color">
       <default>"#4e6119"</default>
       <summary>The background color for the number of the active workspace</summary>
       <description></description>
     </key>
-    <key type="s" name="wsb-inactive-workspace-number-background-color">
+    <key type="s" name="wsb-ws-num-inactive-color">
       <default>"#3d3846"</default>
       <summary>The background color for the number of the inactive workspace</summary>
+      <description></description>
+    </key>
+    <key type="i" name="wsb-ws-app-icon-size">
+      <default>26</default>
+      <summary>The size of each icon (pixels)</summary>
+      <description></description>
+    </key>
+    <key type="i" name="wsb-ws-app-icon-size-half">
+      <default>13</default>
+      <summary>Don'touch! This is set by the extension scripts to one half of wsb-ws-app-icon-size.</summary>
+      <description>This is used in stylesheet.css as a varialbe, so that it can set the proper min-width for the workspace icons wrapper, depending on whether workspace numbers are shown or not.</description>
+    </key>
+    <key type="i" name="wsb-ws-app-icon-spacing">
+      <default>0</default>
+      <summary>The spacing between the icons in each workspace button (pixels)</summary>
+      <description></description>
+    </key>
+    <key type="i" name="wsb-ws-app-icons-wrapper-spacing">
+      <default>5</default>
+      <summary>The space left and right of all the icons as a whole.</summary>
+      <description></description>
+    </key>
+    <key type="b" name="wsb-ws-app-icons-desaturate">
+      <default>false</default>
+      <summary>Desaturate icons</summary>
       <description></description>
     </key>
     <key type="b" name="wsb-container-scroll-to-switch-workspace">

@@ -6,17 +6,14 @@ import * as AltTab from "resource:///org/gnome/shell/ui/altTab.js";
 import Clutter from "gi://Clutter";
 import GLib from "gi://GLib";
 
+// this.rendererInst
 
 export default class WorkspaceButtons {
     //////////////////////////////////////
     // INIT / RESET / DESTROY
 
-    constructor(extSettingsRealTimeObj, extSettings, winIdsContRepr, wssOnlyOnPrimary, mainMonitorIndex) {
-        this.extSettingsRealTimeObj = extSettingsRealTimeObj;
-        this.extSettings = extSettings;
-        this.winIdsContRepr = winIdsContRepr;
-        this.wssOnlyOnPrimary = wssOnlyOnPrimary;
-        this.mainMonitorIndex = mainMonitorIndex;
+    constructor(rendererInst) {
+        this.rendererInst = rendererInst;
         this._init();
     }
 
@@ -35,24 +32,21 @@ export default class WorkspaceButtons {
         }
         this.glibTimeoutIdsSet.clear();
         this.glibTimeoutIdsSet = null;
+
+        this.rendererInst = null;
         
         this.containersArr = null;
-        this.extSettingsRealTimeObj = null;
-        this.extSettings = null;
-        this.winIdsContRepr = null;
-        this.wssOnlyOnPrimary = null;
-        this.mainMonitorIndex = null;
     }
 
     //////////////////////////////////////
     // CONTAINER
     
     add_container() {
-        let containerElem = new St.BoxLayout({style_class: "workspace-buttons", vertical: false, reactive: true, track_hover: true});
+        let containerElem = new St.BoxLayout({style_class: "wsb-container-wrapper", vertical: false, reactive: true, track_hover: true});
         this.containersArr.push(containerElem);
 
         containerElem.connect("scroll-event", (actor, event) => {
-            if (!this.extSettings.get("wsb-container-scroll-to-switch-workspace")) {
+            if (!this.rendererInst.extSettings.get("wsb-container-scroll-to-switch-workspace")) {
                 return;
             }
             let scrollDirection = event.get_scroll_direction();
@@ -70,14 +64,14 @@ export default class WorkspaceButtons {
 
             let btnPressed = event.get_button();
         
-            if (btnPressed === Clutter.BUTTON_SECONDARY && this.extSettings.get("wsb-right-click-ignores-clicked-workspace")) {
+            if (btnPressed === Clutter.BUTTON_SECONDARY && this.rendererInst.extSettings.get("wsb-right-click-ignores-clicked-workspace")) {
                 /*let activeWsIndex = global.workspace_manager.get_active_workspace_index();
-                if (this.winIdsContRepr[actor.monitorIndex][activeWsIndex].length > 1) {
+                if (this.rendererInst.winIdsContRepr[actor.monitorIndex][activeWsIndex].length > 1) {
                     this._show_custom_right_click_window_switcher();
                 }*/
                 this._show_custom_right_click_window_switcher();
             }
-            else if (btnPressed === Clutter.BUTTON_MIDDLE && this.extSettings.get("wsb-middle-click-ignores-clicked-workspace")) {
+            else if (btnPressed === Clutter.BUTTON_MIDDLE && this.rendererInst.extSettings.get("wsb-middle-click-ignores-clicked-workspace")) {
                 Main.overview.toggle();
             }
         });
@@ -89,34 +83,21 @@ export default class WorkspaceButtons {
     // WORKSPACE BUTTON
 
     add_ws_btn(monitorIndex, wsIndex) {
-        let showWsNum = this.extSettings.get("wsb-show-workspace-number");
-        let borderRadiusNum = this.extSettings.get("wsb-button-roundness");
+        let showWsNum = this.rendererInst.extSettings.get("wsb-ws-num-show");
 
-        let btnWrapperElem = new St.BoxLayout({ style_class: "ws-button-wrapper", reactive: true });
+        let btnWrapperElem = new St.BoxLayout({ style_class: "wsb-ws-btn-wrapper", reactive: true });
         btnWrapperElem.wsIndex = wsIndex;
         btnWrapperElem.monitorIndex = monitorIndex;
-        this._update_style(btnWrapperElem, `margin-right: ${this.extSettings.get("wsb-button-spacing")}px;`);
-        this._update_style(btnWrapperElem, `padding: ${this.extSettings.get("wsb-button-padding")}px;`);
 
-        let wsNumWrapper = new St.BoxLayout({ style_class: "ws-num-wrapper" });
-        this._update_style(wsNumWrapper, `background-color: ${this.extSettings.get('wsb-inactive-workspace-number-background-color')};`);
-        this._update_style(wsNumWrapper, `border-radius: ${borderRadiusNum}px 0 0 ${borderRadiusNum}px;`);
-        let numWrapperPaddingNum = this.extSettings.get("wsb-number-horizontal-padding");
-        this._update_style(wsNumWrapper, `padding: 0 ${numWrapperPaddingNum}px 0 ${numWrapperPaddingNum}px;`);
-        let wsNum = new St.Label({ text: `${wsIndex + 1}`, style_class: "ws-num", y_align: Clutter.ActorAlign.CENTER });
-        this._update_style(wsNum, `font-size: ${this.extSettings.get("wsb-number-font-size")}px;`);
+        let wsNumWrapper = new St.BoxLayout({ style_class: "wsb-ws-num-wrapper" });
+        let wsNum = new St.Label({ text: `${wsIndex + 1}`, style_class: "wsb-ws-num-label-elem", y_align: Clutter.ActorAlign.CENTER });
         wsNumWrapper.add_child(wsNum);
         btnWrapperElem.add_child(wsNumWrapper);
         if (!showWsNum) wsNumWrapper.hide();
 
-        let iconsWrapper = new St.BoxLayout({ style_class: "ws-icons-wrapper" });
-        this._update_style(iconsWrapper, `background-color: ${this.extSettings.get('wsb-inactive-button-background-color')};`);
-        let newMinWidth = (showWsNum) ? this.extSettings.get("wsb-icon-size")/2 : this.extSettings.get("wsb-icon-size");
-        this._update_style(iconsWrapper, `min-width: ${newMinWidth}px;`);
-        let iconsWrapperLeftBorderRadiusNum = (this.extSettings.get("wsb-show-workspace-number") === true) ? 0 : borderRadiusNum;
-        this._update_style(iconsWrapper, `border-radius: ${iconsWrapperLeftBorderRadiusNum}px ${borderRadiusNum}px ${borderRadiusNum}px ${iconsWrapperLeftBorderRadiusNum}px;`);
-        let iconsWrapperPaddingNum = this.extSettings.get("wsb-icons-wrapper-horizontal-padding");
-        this._update_style(iconsWrapper, `padding: 0 ${iconsWrapperPaddingNum}px 0 ${iconsWrapperPaddingNum}px;`);
+        let iconsWrapper = new St.BoxLayout({ style_class: "wsb-icons-wrapper" });
+        if (showWsNum) iconsWrapper.add_style_class_name("wsb-icons-wrapper-with-ws-nums");
+        else iconsWrapper.add_style_class_name("wsb-icons-wrapper-full-ws-btn-width");
         btnWrapperElem.add_child(iconsWrapper);
         
         this.containersArr[monitorIndex].insert_child_at_index(btnWrapperElem, wsIndex);
@@ -130,15 +111,15 @@ export default class WorkspaceButtons {
             if (btnPressed === Clutter.BUTTON_PRIMARY) {
                 global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
             }
-            else if (btnPressed === Clutter.BUTTON_SECONDARY && !this.extSettings.get("wsb-right-click-ignores-clicked-workspace")) {
+            else if (btnPressed === Clutter.BUTTON_SECONDARY && !this.rendererInst.extSettings.get("wsb-right-click-ignores-clicked-workspace")) {
                 global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
     
-                /*if (this.winIdsContRepr[actor.monitorIndex][actor.wsIndex].length > 1) {
+                /*if (this.rendererInst.winIdsContRepr[actor.monitorIndex][actor.wsIndex].length > 1) {
                     this._show_custom_right_click_window_switcher();
                 }*/
                 this._show_custom_right_click_window_switcher();
             }
-            else if (btnPressed === Clutter.BUTTON_MIDDLE && !this.extSettings.get("wsb-middle-click-ignores-clicked-workspace")) {
+            else if (btnPressed === Clutter.BUTTON_MIDDLE && !this.rendererInst.extSettings.get("wsb-middle-click-ignores-clicked-workspace")) {
                 global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
                 Main.overview.toggle();
             }
@@ -188,7 +169,7 @@ export default class WorkspaceButtons {
         let newParent = this.containersArr[newMonitorIndex].get_children()[newWsIndex].get_children()[1];
         newParent.insert_child_at_index(elemToMove, newWindowIndex);
 
-        if (this.extSettings.get("wsb-show-workspace-number") === false && newMonitorIndex === this.mainMonitorIndex && newParent.get_children().length === 1) {
+        if (this.rendererInst.extSettings.get("wsb-ws-num-show") === false && newMonitorIndex === this.rendererInst.mainMonitorIndex && newParent.get_children().length === 1) {
             // to fix a weird glitch, where when workspace numbers are hidden and window is moved from a non-main monitor to the main one
             // and the workspace on the main one is empty before that, the icon doesn't show up until the next event or hover
             newParent.queue_redraw();
@@ -202,24 +183,23 @@ export default class WorkspaceButtons {
     }
 
     _get_new_window_icon(windowObj) {
-        let windowIconWrapperElem = new St.BoxLayout({ style_class: "app-icon-wrapper" });
-        this._update_style(windowIconWrapperElem, `margin-right: ${this.extSettings.get("wsb-icon-spacing")}px;`);
+        let windowIconWrapperElem = new St.BoxLayout({ style_class: "wsb-single-icon-wrapper" });
         windowIconWrapperElem.windowId = windowObj.get_id();
     
         // Add a small delay to allow time for the app's icon to load properly, especially for XWayland (GTK3) apps
-        let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extSettings.get("wsb-generate-window-icon-timeout"), () => {
+        let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.rendererInst.extSettings.get("wsb-generate-window-icon-timeout"), () => {
             let appObj = Shell.WindowTracker.get_default().get_window_app(windowObj);
     
             // If the appObj is valid, add the icon texture
             if (appObj) {
-                let appIcon = appObj.create_icon_texture(this.extSettings.get('wsb-icon-size'));
-                if (this.extSettings.get("wsb-desaturate-icons")) {
+                let appIcon = appObj.create_icon_texture(this.rendererInst.extSettings.get('wsb-ws-app-icon-size'));
+                if (this.rendererInst.extSettings.get("wsb-ws-app-icons-desaturate")) {
                     appIcon.add_effect(new Clutter.DesaturateEffect());
                 }
                 windowIconWrapperElem.add_child(appIcon);
             } else {
                 // Fallback icon if the appObj is not found
-                let placeholderIcon = new St.Icon({ icon_name: 'image-missing-symbolic', icon_size: this.extSettings.get('wsb-icon-size') });
+                let placeholderIcon = new St.Icon({ icon_name: 'image-missing-symbolic', icon_size: this.rendererInst.extSettings.get('wsb-ws-app-icon-size') });
                 windowIconWrapperElem.add_child(placeholderIcon);
             }
 
@@ -239,16 +219,9 @@ export default class WorkspaceButtons {
             windowsMap[windowObj.get_id()] = windowObj;
         });
 
-        // the min-width of buttons is determined based on whether numbers are present or not AND THE ICON SIZE
-        // so when icon size changes, we need to update min-wdith as well
-        let showNum = this.extSettings.get("wsb-show-workspace-number");
-
         for (let container of this.containersArr) {
             for (let wsBtnElem of container.get_children()) {
                 let iconsWrapper = wsBtnElem.get_children()[1];
-
-                let newMinWidth = (showNum) ? this.extSettings.get("wsb-icon-size")/2 : this.extSettings.get("wsb-icon-size");
-                this._update_style(iconsWrapper, `min-width: ${newMinWidth}px;`);
 
                 let iconsWrapperChildren = iconsWrapper.get_children();
                 for (let i=0; i<iconsWrapperChildren.length; i++) {
@@ -277,27 +250,27 @@ export default class WorkspaceButtons {
         const set_active_style = (monitorIndex, wsIndex) => {
             let wsBtnElem = this.containersArr[monitorIndex].get_children()[wsIndex];
             let children = wsBtnElem.get_children();
-            this._update_style(children[0], `background-color: ${this.extSettings.get('wsb-active-workspace-number-background-color')};`);
-            this._update_style(children[1], `background-color: ${this.extSettings.get('wsb-active-button-background-color')};`);
+            children[0].add_style_class_name("wsb-ws-num-wrapper-active");
+            children[1].add_style_class_name("wsb-icons-wrapper-active");
         };
 
         for (let monitorIndex=0; monitorIndex<this.containersArr.length; monitorIndex++) {
-            // apply inactive workspace styles to all buttons
+            // remove the active class from all
             for (let wsBtnElem of this.containersArr[monitorIndex].get_children()) {
                 let children = wsBtnElem.get_children();
-                this._update_style(children[0], `background-color: ${this.extSettings.get('wsb-inactive-workspace-number-background-color')};`);
-                this._update_style(children[1], `background-color: ${this.extSettings.get('wsb-inactive-button-background-color')};`);
+                children[0].remove_style_class_name("wsb-ws-num-wrapper-active");
+                children[1].remove_style_class_name("wsb-icons-wrapper-active");
             }
 
             // apply user-defined style to the active workspace (with respect to workspaces only on primary)
 
             let curWsIndex = global.workspace_manager.get_active_workspace_index();
 
-            if (this.wssOnlyOnPrimary === false) {
+            if (this.rendererInst.wssOnlyOnPrimary === false) {
                 set_active_style(monitorIndex, curWsIndex);
             }
             else {
-                if (monitorIndex === this.mainMonitorIndex) {
+                if (monitorIndex === this.rendererInst.mainMonitorIndex) {
                     set_active_style(monitorIndex, curWsIndex);
                 }
                 else {
@@ -310,151 +283,47 @@ export default class WorkspaceButtons {
     _enable_settings_events() {
         let id;
     
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-button-spacing', () => {
-            for (let container of this.containersArr) {
-                for (let wsBtnElem of container.get_children()) {
-                    this._update_style(wsBtnElem, `margin-right: ${this.extSettings.get("wsb-button-spacing")}px;`);
-                }
-            }
-        });
-        this.extSettings.add_event_id(id);
-    
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-button-padding', () => {
-            for (let container of this.containersArr) {
-                for (let wsBtnElem of container.get_children()) {
-                    this._update_style(wsBtnElem, `padding: ${this.extSettings.get("wsb-button-padding")}px;`);
-                }
-            }
-        });
-        this.extSettings.add_event_id(id);
-    
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-button-roundness', () => {
-            // since we have both - the numbers and the icons wrapper, we have to play this somewhat hacky
-            // the numbers wrapper is always rounded on the top and bottom left, no matter what
-            // the icons wrapper is always rounded on the top and bottom right, but if numbers are disabled, all 4 corners
-            let borderRadiusNum = this.extSettings.get("wsb-button-roundness");
-    
-            for (let container of this.containersArr) {
-                for (let wsBtnElem of container.get_children()) {
-                    let children = wsBtnElem.get_children();
-                    this._update_style(children[0], `border-radius: ${borderRadiusNum}px 0 0 ${borderRadiusNum}px;`);
-                    let iconsWrapperLeftBorderRadiusNum = (this.extSettings.get("wsb-show-workspace-number") === true) ? 0 : borderRadiusNum;
-                    this._update_style(children[1], `border-radius: ${iconsWrapperLeftBorderRadiusNum}px ${borderRadiusNum}px ${borderRadiusNum}px ${iconsWrapperLeftBorderRadiusNum}px;`);
-                }
-            }
-        });
-        this.extSettings.add_event_id(id);
-    
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-show-workspace-number', () => {
-            let showWsNum = this.extSettings.get("wsb-show-workspace-number");
-            let borderRadiusNum = this.extSettings.get("wsb-button-roundness");
+        id = this.rendererInst.extensionInst.extSettingsRealTimeObj.connect('changed::wsb-ws-num-show', () => {
+            let showWsNum = this.rendererInst.extSettings.get("wsb-ws-num-show");
     
             for (let containerElem of this.containersArr) {
                 for (let wsBtnElem of containerElem.get_children()) {
                     let children = wsBtnElem.get_children();
-                    if (showWsNum) children[0].show();
-                    else children[0].hide();
-    
-                    let iconsWrapperLeftBorderRadiusNum = (this.extSettings.get("wsb-show-workspace-number") === true) ? 0 : borderRadiusNum;
-                    this._update_style(children[1], `border-radius: ${iconsWrapperLeftBorderRadiusNum}px ${borderRadiusNum}px ${borderRadiusNum}px ${iconsWrapperLeftBorderRadiusNum}px;`);
-                    let newMinWidth = (showWsNum) ? this.extSettings.get("wsb-icon-size")/2 : this.extSettings.get("wsb-icon-size");
-                    this._update_style(children[1], `min-width: ${newMinWidth}px;`);
-                }
-            }
-        });
-        this.extSettings.add_event_id(id);
-    
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-number-font-size', () => {
-            for (let container of this.containersArr) {
-                for (let wsBtnElem of container.get_children()) {
-                    let wsNumElem = wsBtnElem.get_children()[0].get_children()[0];
-                    wsNumElem.set_style(`font-size: ${this.extSettings.get("wsb-number-font-size")}px;`);
-                }
-            }
-        });
-        this.extSettings.add_event_id(id);
-
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-number-horizontal-padding', () => {
-            let numWrapperPaddingNum = this.extSettings.get("wsb-number-horizontal-padding");
-            for (let container of this.containersArr) {
-                for (let wsBtnElem of container.get_children()) {
-                    let wsNumWrapper = wsBtnElem.get_children()[0];
-                    this._update_style(wsNumWrapper, `padding: 0 ${numWrapperPaddingNum}px 0 ${numWrapperPaddingNum}px;`);
-                }
-            }
-        });
-        this.extSettings.add_event_id(id);
-    
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-icon-size', () => {
-            this._regenerate_icons();
-        });
-        this.extSettings.add_event_id(id);
-    
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-icon-spacing', () => {
-            for (let container of this.containersArr) {
-                for (let wsBtnElem of container.get_children()) {
-                    for (let windowIconElem of wsBtnElem.get_children()[1].get_children()) {
-                        windowIconElem.set_style(`margin-right: ${this.extSettings.get("wsb-icon-spacing")}px;`);
+                    if (showWsNum) {
+                        children[0].show();
+                        children[1].remove_style_class_name("wsb-icons-wrapper-full-ws-btn-width");
+                        children[1].add_style_class_name("wsb-icons-wrapper-with-ws-nums");
+                    }
+                    else {
+                        children[0].hide();
+                        children[1].remove_style_class_name("wsb-icons-wrapper-with-ws-nums");
+                        children[1].add_style_class_name("wsb-icons-wrapper-full-ws-btn-width");
                     }
                 }
             }
         });
-        this.extSettings.add_event_id(id);
-
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-icons-wrapper-horizontal-padding', () => {
-            let iconsWrapperPaddingNum = this.extSettings.get("wsb-icons-wrapper-horizontal-padding");
-            for (let container of this.containersArr) {
-                for (let wsBtnElem of container.get_children()) {
-                    let iconsWrapper = wsBtnElem.get_children()[1];
-                    this._update_style(iconsWrapper, `padding: 0 ${iconsWrapperPaddingNum}px 0 ${iconsWrapperPaddingNum}px;`);
-                }
-            }
-        });
-        this.extSettings.add_event_id(id);
-
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-desaturate-icons', () => {
+        this.rendererInst.extSettings.add_event_id(id);
+    
+        id = this.rendererInst.extensionInst.extSettingsRealTimeObj.connect('changed::wsb-ws-app-icon-size', () => {
+            let iconSizeHalf = Math.floor(this.rendererInst.extSettings.get("wsb-ws-app-icon-size")/2);
+            this.rendererInst.extensionInst.extSettingsRealTimeObj.set_int('wsb-ws-app-icon-size-half', iconSizeHalf);
             this._regenerate_icons();
         });
-        this.extSettings.add_event_id(id);
-    
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-active-button-background-color', () => {
-            this.update_active_workspace();
-        });
-        this.extSettings.add_event_id(id);
-    
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-inactive-button-background-color', () => {
-            this.update_active_workspace();
-        });
-        this.extSettings.add_event_id(id);
-    
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-active-workspace-number-background-color', () => {
-            this.update_active_workspace();
-        });
-        this.extSettings.add_event_id(id);
-    
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-inactive-workspace-number-background-color', () => {
-            this.update_active_workspace();
-        });
-        this.extSettings.add_event_id(id);
+        this.rendererInst.extSettings.add_event_id(id);
 
-        id = this.extSettingsRealTimeObj.connect('changed::wsb-generate-window-icon-timeout', () => {
+        id = this.rendererInst.extensionInst.extSettingsRealTimeObj.connect('changed::wsb-ws-app-icons-desaturate', () => {
             this._regenerate_icons();
         });
-        this.extSettings.add_event_id(id);
+        this.rendererInst.extSettings.add_event_id(id);
+
+        id = this.rendererInst.extensionInst.extSettingsRealTimeObj.connect('changed::wsb-generate-window-icon-timeout', () => {
+            this._regenerate_icons();
+        });
+        this.rendererInst.extSettings.add_event_id(id);
     }
 
     //////////////////////////////////////
     // OTHER
-
-    _update_style(elem, declaration) {
-        declaration = declaration.trim();
-        let oldStyle = elem.get_style();
-        if (oldStyle === null) oldStyle = "";
-        let prop = declaration.split(":")[0].trim();
-        let regex = new RegExp(`${prop}:[^;]+;`, "g");
-        let newStyle = declaration + " " + oldStyle.replace(regex, "").trim();
-        elem.set_style(newStyle);
-    }
 
     debug_get_container_representation_array() {
         let output = [];
