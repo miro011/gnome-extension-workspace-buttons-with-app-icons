@@ -13,7 +13,6 @@ export default class Topbars {
 
     _init() {
         this.containersArr = [];
-        this.eventIdsArr = []; // have to store these here for the topbars style alterations - long story short, renderer.js will run destroy on this class but the settings object in extension.js remains, so this would keep adding the same events again and again
     }
 
     destroy() {
@@ -27,8 +26,6 @@ export default class Topbars {
 
             this.containersArr[i].destroy();
         }
-        this.rendererInst.extensionInst.extSettings.rm_event_ids(this.eventIdsArr);
-        this.eventIdsArr = null;
         this.containersArr = null;
         this.rendererInst = null;
     }
@@ -56,7 +53,6 @@ export default class Topbars {
                 }
             });
             this.rendererInst.extensionInst.extSettings.add_event_id(id);
-            this.eventIdsArr.push(id);
         }
     }
 

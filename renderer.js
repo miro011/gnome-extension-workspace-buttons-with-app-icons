@@ -16,6 +16,11 @@ export default class Renderer {
 
     _init() {
         //log("renderer => _init");
+
+        this.extensionInst.extSettings.add_event_id(this.extensionInst.extSettings.realTimeObj.connect('changed::top-bar-move-date-right', () => {
+            this.extensionInst.toggle_date_menu_position(null);
+        }));
+
         this.winIdsContRepr = []; // [m0[ws0[winId, winId], ws1[winId]], m1[...]....] - same structure as the ws buttons container
         
         this.numMonitors = global.display.get_n_monitors();
@@ -42,6 +47,13 @@ export default class Renderer {
         this.topbars = null;
         this.workspaceButtons.destroy();
         this.workspaceButtons = null;
+
+        this.extensionInst.extSettings.rm_all_events();
+        this.extensionInst.mutterSettings.rm_all_events();
+
+        if (full===true) {
+            this.extensionInst = null;
+        }
 
         for (let component in this.gnomeMainEventIdsObj) {
             let componentObj = Main[component];
@@ -84,10 +96,6 @@ export default class Renderer {
             Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[this.mainMonitorIndex];
         }
         this.mainMonitorIndex = null;
-        
-        if (full===true) {
-            this.extensionInst = null;
-        }
     }
 
     //////////////////////////////////////

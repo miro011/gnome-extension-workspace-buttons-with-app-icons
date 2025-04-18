@@ -55,14 +55,12 @@ export default class Settings {
     add_event_id(eventId) {
         this.eventIdsArr.push(eventId);
     }
-
-    rm_event_ids(eventIdsArr) {
-        if (!Array.isArray(eventIdsArr)) eventIdsArr = [eventIdsArr];
-
-        for (let eventId of eventIdsArr) {
+    
+    rm_all_events() {
+        this.eventIdsArr.forEach(eventId => {
             this.realTimeObj.disconnect(eventId);
-            this.eventIdsArr = this.eventIdsArr.filter(item => item !== eventId);
-        }
+        });
+        this.eventIdsArr = [];
     }
 
     _add_update_static_settings_event(settingName) {
