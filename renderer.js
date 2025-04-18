@@ -306,17 +306,18 @@ export default class Renderer {
 
         this.gnomeGlobalEventIdsObj["display"].push(global.display.connect('window-created', (display, windowObj) => {
             let windowId = windowObj.get_id();
-            let monitorIndex = windowObj.get_monitor();
-            let wsIndex = windowObj.get_workspace().index();
-            let workspaceObj = global.workspace_manager.get_workspace_by_index(wsIndex);
-            // corrent wsIndex to accomodate workspaces only on primary
-            if (this.wssOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex) {
-                wsIndex = 0;
-            }
+            let workspaceObj = global.workspace_manager.get_workspace_by_index(windowObj.get_workspace().index());
 
             for (let windowObj of global.display.get_tab_list(Meta.TabList.NORMAL, workspaceObj)) {
                 if (windowObj.get_id() === windowId) {
                     let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extensionInst.extSettings.get("wsb-generate-window-icon-timeout"), () => {
+                        // monitor and workspace index variables must be re-init here, as the window may have moved during this timeout
+                        let monitorIndex = windowObj.get_monitor();
+                        let wsIndex = windowObj.get_workspace().index();
+                        // corrent wsIndex to accomodate workspaces only on primary
+                        if (this.wssOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex) {
+                            wsIndex = 0;
+                        }
                         this.winIdsContRepr[monitorIndex][wsIndex].unshift(windowId);
                         this.workspaceButtons.add_window_icon("l", windowObj, monitorIndex, wsIndex);
     
