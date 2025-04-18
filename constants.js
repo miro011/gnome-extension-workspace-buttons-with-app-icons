@@ -1,7 +1,15 @@
 export const extensionSettingsInfoObj = {
+    "top-bar-override-height": "b",
+    "top-bar-height": "i",
+    "top-bar-override-color": "b",
+    "top-bar-color": "s",
+    "top-bar-move-date-right": "b",
     "wsb-ws-btn-spacing": "i",
     "wsb-ws-btn-vert-spacing": "i",
     "wsb-ws-btn-roundness": "i",
+    "wsb-ws-btn-border-width": "i",
+    "wsb-ws-btn-border-active-color": "s",
+    "wsb-ws-btn-border-inactive-color": "s",
     "wsb-ws-num-show": "b",
     "wsb-ws-num-font-size": "i",
     "wsb-ws-num-spacing": "i",
@@ -23,4 +31,9 @@ export const extensionSettingsInfoObj = {
 export const mutterSettingsInfoObj = {
     "workspaces-only-on-primary": "b",
     "dynamic-workspaces": "b"
+};
+
+export const panelStyleOverrideCorrClassObj = {
+    "top-bar-override-height": "wsb-panel-class-override-height",
+    "top-bar-override-color": "wsb-panel-class-override-color"
 };

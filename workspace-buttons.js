@@ -46,7 +46,7 @@ export default class WorkspaceButtons {
         this.containersArr.push(containerElem);
 
         containerElem.connect("scroll-event", (actor, event) => {
-            if (!this.rendererInst.extSettings.get("wsb-container-scroll-to-switch-workspace")) {
+            if (!this.rendererInst.extensionInst.extSettings.get("wsb-container-scroll-to-switch-workspace")) {
                 return;
             }
             let scrollDirection = event.get_scroll_direction();
@@ -64,14 +64,14 @@ export default class WorkspaceButtons {
 
             let btnPressed = event.get_button();
         
-            if (btnPressed === Clutter.BUTTON_SECONDARY && this.rendererInst.extSettings.get("wsb-right-click-ignores-clicked-workspace")) {
+            if (btnPressed === Clutter.BUTTON_SECONDARY && this.rendererInst.extensionInst.extSettings.get("wsb-right-click-ignores-clicked-workspace")) {
                 /*let activeWsIndex = global.workspace_manager.get_active_workspace_index();
                 if (this.rendererInst.winIdsContRepr[actor.monitorIndex][activeWsIndex].length > 1) {
                     this._show_custom_right_click_window_switcher();
                 }*/
                 this._show_custom_right_click_window_switcher();
             }
-            else if (btnPressed === Clutter.BUTTON_MIDDLE && this.rendererInst.extSettings.get("wsb-middle-click-ignores-clicked-workspace")) {
+            else if (btnPressed === Clutter.BUTTON_MIDDLE && this.rendererInst.extensionInst.extSettings.get("wsb-middle-click-ignores-clicked-workspace")) {
                 Main.overview.toggle();
             }
         });
@@ -83,7 +83,7 @@ export default class WorkspaceButtons {
     // WORKSPACE BUTTON
 
     add_ws_btn(monitorIndex, wsIndex) {
-        let showWsNum = this.rendererInst.extSettings.get("wsb-ws-num-show");
+        let showWsNum = this.rendererInst.extensionInst.extSettings.get("wsb-ws-num-show");
 
         let btnWrapperElem = new St.BoxLayout({ style_class: "wsb-ws-btn-wrapper", reactive: true });
         btnWrapperElem.wsIndex = wsIndex;
@@ -111,7 +111,7 @@ export default class WorkspaceButtons {
             if (btnPressed === Clutter.BUTTON_PRIMARY) {
                 global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
             }
-            else if (btnPressed === Clutter.BUTTON_SECONDARY && !this.rendererInst.extSettings.get("wsb-right-click-ignores-clicked-workspace")) {
+            else if (btnPressed === Clutter.BUTTON_SECONDARY && !this.rendererInst.extensionInst.extSettings.get("wsb-right-click-ignores-clicked-workspace")) {
                 global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
     
                 /*if (this.rendererInst.winIdsContRepr[actor.monitorIndex][actor.wsIndex].length > 1) {
@@ -119,7 +119,7 @@ export default class WorkspaceButtons {
                 }*/
                 this._show_custom_right_click_window_switcher();
             }
-            else if (btnPressed === Clutter.BUTTON_MIDDLE && !this.rendererInst.extSettings.get("wsb-middle-click-ignores-clicked-workspace")) {
+            else if (btnPressed === Clutter.BUTTON_MIDDLE && !this.rendererInst.extensionInst.extSettings.get("wsb-middle-click-ignores-clicked-workspace")) {
                 global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
                 Main.overview.toggle();
             }
@@ -169,7 +169,7 @@ export default class WorkspaceButtons {
         let newParent = this.containersArr[newMonitorIndex].get_children()[newWsIndex].get_children()[1];
         newParent.insert_child_at_index(elemToMove, newWindowIndex);
 
-        if (this.rendererInst.extSettings.get("wsb-ws-num-show") === false && newMonitorIndex === this.rendererInst.mainMonitorIndex && newParent.get_children().length === 1) {
+        if (this.rendererInst.extensionInst.extSettings.get("wsb-ws-num-show") === false && newMonitorIndex === this.rendererInst.mainMonitorIndex && newParent.get_children().length === 1) {
             // to fix a weird glitch, where when workspace numbers are hidden and window is moved from a non-main monitor to the main one
             // and the workspace on the main one is empty before that, the icon doesn't show up until the next event or hover
             newParent.queue_redraw();
@@ -187,19 +187,19 @@ export default class WorkspaceButtons {
         windowIconWrapperElem.windowId = windowObj.get_id();
     
         // Add a small delay to allow time for the app's icon to load properly, especially for XWayland (GTK3) apps
-        let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.rendererInst.extSettings.get("wsb-generate-window-icon-timeout"), () => {
+        let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.rendererInst.extensionInst.extSettings.get("wsb-generate-window-icon-timeout"), () => {
             let appObj = Shell.WindowTracker.get_default().get_window_app(windowObj);
     
             // If the appObj is valid, add the icon texture
             if (appObj) {
-                let appIcon = appObj.create_icon_texture(this.rendererInst.extSettings.get('wsb-ws-app-icon-size'));
-                if (this.rendererInst.extSettings.get("wsb-ws-app-icons-desaturate")) {
+                let appIcon = appObj.create_icon_texture(this.rendererInst.extensionInst.extSettings.get('wsb-ws-app-icon-size'));
+                if (this.rendererInst.extensionInst.extSettings.get("wsb-ws-app-icons-desaturate")) {
                     appIcon.add_effect(new Clutter.DesaturateEffect());
                 }
                 windowIconWrapperElem.add_child(appIcon);
             } else {
                 // Fallback icon if the appObj is not found
-                let placeholderIcon = new St.Icon({ icon_name: 'image-missing-symbolic', icon_size: this.rendererInst.extSettings.get('wsb-ws-app-icon-size') });
+                let placeholderIcon = new St.Icon({ icon_name: 'image-missing-symbolic', icon_size: this.rendererInst.extensionInst.extSettings.get('wsb-ws-app-icon-size') });
                 windowIconWrapperElem.add_child(placeholderIcon);
             }
 
@@ -283,8 +283,8 @@ export default class WorkspaceButtons {
     _enable_settings_events() {
         let id;
     
-        id = this.rendererInst.extensionInst.extSettingsRealTimeObj.connect('changed::wsb-ws-num-show', () => {
-            let showWsNum = this.rendererInst.extSettings.get("wsb-ws-num-show");
+        id = this.rendererInst.extensionInst.extSettings.realTimeObj.connect('changed::wsb-ws-num-show', () => {
+            let showWsNum = this.rendererInst.extensionInst.extSettings.get("wsb-ws-num-show");
     
             for (let containerElem of this.containersArr) {
                 for (let wsBtnElem of containerElem.get_children()) {
@@ -302,24 +302,24 @@ export default class WorkspaceButtons {
                 }
             }
         });
-        this.rendererInst.extSettings.add_event_id(id);
+        this.rendererInst.extensionInst.extSettings.add_event_id(id);
     
-        id = this.rendererInst.extensionInst.extSettingsRealTimeObj.connect('changed::wsb-ws-app-icon-size', () => {
-            let iconSizeHalf = Math.floor(this.rendererInst.extSettings.get("wsb-ws-app-icon-size")/2);
-            this.rendererInst.extensionInst.extSettingsRealTimeObj.set_int('wsb-ws-app-icon-size-half', iconSizeHalf);
+        id = this.rendererInst.extensionInst.extSettings.realTimeObj.connect('changed::wsb-ws-app-icon-size', () => {
+            let iconSizeHalf = Math.floor(this.rendererInst.extensionInst.extSettings.get("wsb-ws-app-icon-size")/2);
+            this.rendererInst.extensionInst.extSettings.realTimeObj.set_int('wsb-ws-app-icon-size-half', iconSizeHalf);
             this._regenerate_icons();
         });
-        this.rendererInst.extSettings.add_event_id(id);
+        this.rendererInst.extensionInst.extSettings.add_event_id(id);
 
-        id = this.rendererInst.extensionInst.extSettingsRealTimeObj.connect('changed::wsb-ws-app-icons-desaturate', () => {
+        id = this.rendererInst.extensionInst.extSettings.realTimeObj.connect('changed::wsb-ws-app-icons-desaturate', () => {
             this._regenerate_icons();
         });
-        this.rendererInst.extSettings.add_event_id(id);
+        this.rendererInst.extensionInst.extSettings.add_event_id(id);
 
-        id = this.rendererInst.extensionInst.extSettingsRealTimeObj.connect('changed::wsb-generate-window-icon-timeout', () => {
+        id = this.rendererInst.extensionInst.extSettings.realTimeObj.connect('changed::wsb-generate-window-icon-timeout', () => {
             this._regenerate_icons();
         });
-        this.rendererInst.extSettings.add_event_id(id);
+        this.rendererInst.extensionInst.extSettings.add_event_id(id);
     }
 
     //////////////////////////////////////

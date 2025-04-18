@@ -3,6 +3,8 @@ import GObject from 'gi://GObject';
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
+import * as constants from "./constants.js";
+
 export default class Topbars {
     constructor(rendererInst) {
         this.rendererInst = rendererInst;
@@ -11,6 +13,7 @@ export default class Topbars {
 
     _init() {
         this.containersArr = [];
+        this.eventIdsArr = []; // have to store these here for the topbars style alterations - long story short, renderer.js will run destroy on this class but the settings object in extension.js remains, so this would keep adding the same events again and again
     }
 
     destroy() {
@@ -24,6 +27,8 @@ export default class Topbars {
 
             this.containersArr[i].destroy();
         }
+        this.rendererInst.extensionInst.extSettings.rm_event_ids(this.eventIdsArr);
+        this.eventIdsArr = null;
         this.containersArr = null;
         this.rendererInst = null;
     }
@@ -33,12 +38,37 @@ export default class Topbars {
     add_topbar(monitorIndex) {
         //log(`Adding topbar for index ${monitorIndex}`);
         if (monitorIndex === this.rendererInst.mainMonitorIndex) {
+            this.apply_panel_style_overrides(Main.panel);
             this.containersArr.push(Main.panel);
         }
         else {
             let monitorObj = Main.layoutManager.monitors[monitorIndex];
             let panel = new SidePanel(monitorObj);
+            this.apply_panel_style_overrides(panel);
             this.containersArr.push(panel);
+        }
+
+        for (let settingName in constants.panelStyleOverrideCorrClassObj) {
+            let id;
+            id = this.rendererInst.extensionInst.extSettings.realTimeObj.connect(`changed::${settingName}`, () => {
+                for (let panel of this.containersArr) {
+                    this.apply_panel_style_overrides(panel);
+                }
+            });
+            this.rendererInst.extensionInst.extSettings.add_event_id(id);
+            this.eventIdsArr.push(id);
+        }
+    }
+
+    apply_panel_style_overrides(panel) {
+        for (let settingName in constants.panelStyleOverrideCorrClassObj) {
+            let custClass = constants.panelStyleOverrideCorrClassObj[settingName];
+            panel.remove_style_class_name(custClass); // have to remove the style 
+
+            if (this.rendererInst.extensionInst.extSettings.get(settingName) === true) {
+                let custClass = constants.panelStyleOverrideCorrClassObj[settingName];
+                panel.add_style_class_name(custClass);
+            }
         }
     }
 

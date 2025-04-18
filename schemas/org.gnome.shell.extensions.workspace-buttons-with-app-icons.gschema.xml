@@ -1,6 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="gnome-shell-extensions">
   <schema path="/org/gnome/shell/extensions/workspace-buttons-with-app-icons/" id="org.gnome.shell.extensions.workspace-buttons-with-app-icons">
+    <key type="b" name="top-bar-override-height">
+        <default>false</default>
+        <summary>When this is enabled, the extension will follow the topbar height set by the extension</summary>
+        <description></description>
+    </key>
+    <key type="i" name="top-bar-height">
+        <default>35</default>
+        <summary>The custom topbar height</summary>
+        <description></description>
+    </key>
+    <key type="b" name="top-bar-override-color">
+        <default>false</default>
+        <summary>When this is enabled, the extension will follow the topbar color set by the extension</summary>
+        <description></description>
+    </key>
+    <key type="s" name="top-bar-color">
+        <default>"#000000"</default>
+        <summary>The custom topbar color</summary>
+        <description></description>
+    </key>
+    <key type="b" name="top-bar-move-date-right">
+        <default>false</default>
+        <summary>Whether to move the date right</summary>
+        <description></description>
+    </key>
     <key type="i" name="wsb-ws-btn-spacing">
         <default>5</default>
         <summary>The space between the workspace buttons (pixels)</summary>
@@ -16,15 +41,20 @@
         <summary>How round should the buttons be - aka border radius - (pixels)</summary>
         <description></description>
     </key>
-    <key type="s" name="wsb-ws-app-icons-wrapper-active-color">
-      <default>"#273600"</default>
-      <summary>The background color of the inactive workspace button</summary>
-      <description></description>
+    <key type="i" name="wsb-ws-btn-border-width">
+        <default>0</default>
+        <summary>Border around the buttons</summary>
+        <description></description>
     </key>
-    <key type="s" name="wsb-ws-app-icons-wrapper-inactive-color">
-      <default>"#241f31"</default>
-      <summary>The background color of the inactive workspace button</summary>
-      <description></description>
+    <key type="s" name="wsb-ws-btn-border-active-color">
+        <default>"#4e6119"</default>
+        <summary>Color of the border around the active button</summary>
+        <description></description>
+    </key>
+    <key type="s" name="wsb-ws-btn-border-inactive-color">
+        <default>"#3d3846"</default>
+        <summary>Color of the border around the inactive buttons</summary>
+        <description></description>
     </key>
     <key type="b" name="wsb-ws-num-show">
       <default>true</default>
@@ -74,6 +104,16 @@
     <key type="b" name="wsb-ws-app-icons-desaturate">
       <default>false</default>
       <summary>Desaturate icons</summary>
+      <description></description>
+    </key>
+    <key type="s" name="wsb-ws-app-icons-wrapper-active-color">
+      <default>"#273600"</default>
+      <summary>The background color of the inactive workspace button</summary>
+      <description></description>
+    </key>
+    <key type="s" name="wsb-ws-app-icons-wrapper-inactive-color">
+      <default>"#241f31"</default>
+      <summary>The background color of the inactive workspace button</summary>
       <description></description>
     </key>
     <key type="b" name="wsb-container-scroll-to-switch-workspace">

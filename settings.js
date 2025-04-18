@@ -10,11 +10,11 @@ import * as styler from "./styler.js";
 
 export default class Settings {
     // Set instance variables to params provided
-    constructor(realTimeObj, infoObj, rendererInst=null) {
+    constructor(realTimeObj, infoObj, extensionInst=null) {
         this.realTimeObj = realTimeObj;
         this.infoObj = infoObj;
-        this.rendererInst = rendererInst;
-        this.isExtensionSettings = (rendererInst===null) ? false : true;
+        this.extensionInst = extensionInst;
+        this.isExtensionSettings = (extensionInst===null) ? false : true;
         this._init();
     }
 
@@ -39,7 +39,7 @@ export default class Settings {
 
         this.realTimeObj = null;
         this.infoObj = null;
-        this.rendererInst = null;
+        this.extensionInst = null;
         this.isExtensionSettings = null;
         this.staticObj = null;
     }
@@ -56,6 +56,15 @@ export default class Settings {
         this.eventIdsArr.push(eventId);
     }
 
+    rm_event_ids(eventIdsArr) {
+        if (!Array.isArray(eventIdsArr)) eventIdsArr = [eventIdsArr];
+
+        for (let eventId of eventIdsArr) {
+            this.realTimeObj.disconnect(eventId);
+            this.eventIdsArr = this.eventIdsArr.filter(item => item !== eventId);
+        }
+    }
+
     _add_update_static_settings_event(settingName) {
         let eventId = this.realTimeObj.connect(`changed::${settingName}`, ()=>{
             this._update_static_setting(settingName);
@@ -65,7 +74,7 @@ export default class Settings {
 
     _add_style_update_event(settingName) {
         let eventId = this.realTimeObj.connect(`changed::${settingName}`, ()=>{
-            styler.update_style(this.rendererInst);
+            styler.update_style(this.extensionInst);
         });
         this.eventIdsArr.push(eventId);
     }

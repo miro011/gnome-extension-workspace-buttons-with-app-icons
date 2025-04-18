@@ -2,12 +2,8 @@
 
 import Meta from "gi://Meta";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 
-
-import Settings from "./settings.js";
-import * as constants from "./constants.js";
 import WorkspaceButtons from "./workspace-buttons.js";
 import Topbars from "./topbars.js";
 import * as styler from "./styler.js";
@@ -20,14 +16,10 @@ export default class Renderer {
 
     _init() {
         //log("renderer => _init");
-        this.extSettings = new Settings(this.extensionInst.extSettingsRealTimeObj, constants.extensionSettingsInfoObj, this);
-        this.mutterSettingsRealTimeObj = new Gio.Settings({ schema: 'org.gnome.mutter' });
-        this.mutterSettings = new Settings(this.mutterSettingsRealTimeObj, constants.mutterSettingsInfoObj);
-
         this.winIdsContRepr = []; // [m0[ws0[winId, winId], ws1[winId]], m1[...]....] - same structure as the ws buttons container
         
         this.numMonitors = global.display.get_n_monitors();
-        this.wssOnlyOnPrimary = (this.mutterSettings.get("workspaces-only-on-primary") === true) ? true : false;
+        this.wssOnlyOnPrimary = (this.extensionInst.mutterSettings.get("workspaces-only-on-primary") === true) ? true : false;
         this.mainMonitorIndex = Main.layoutManager.primaryMonitor.index;
         //log(`mainMonitorIndex=${this.mainMonitorIndex}`);
 
@@ -42,19 +34,10 @@ export default class Renderer {
         this._enable_settings_events();
         this._enable_gnome_events();
 
-        styler.update_style(this);
+        styler.update_style(this.extensionInst);
     }
 
     destroy(full=true, restorePrimaryMonitor=true) {
-        this.extSettings.destroy();
-        this.extSettings = null;
-        if (full===true) {
-            this.extensionInst = null;
-        }
-        this.mutterSettings.destroy();
-        this.mutterSettings = null;
-        this.mutterSettingsRealTimeObj = null;
-
         this.topbars.destroy();
         this.topbars = null;
         this.workspaceButtons.destroy();
@@ -101,6 +84,10 @@ export default class Renderer {
             Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[this.mainMonitorIndex];
         }
         this.mainMonitorIndex = null;
+        
+        if (full===true) {
+            this.extensionInst = null;
+        }
     }
 
     //////////////////////////////////////
@@ -143,17 +130,17 @@ export default class Renderer {
     _enable_settings_events() {
         let id;
 
-        id = this.mutterSettingsRealTimeObj.connect('changed::workspaces-only-on-primary', () => {
+        id = this.extensionInst.mutterSettings.realTimeObj.connect('changed::workspaces-only-on-primary', () => {
             this.destroy(false);
             this._init();
         });
-        this.mutterSettings.add_event_id(id);
+        this.extensionInst.mutterSettings.add_event_id(id);
 
-        id = this.mutterSettingsRealTimeObj.connect('changed::dynamic-workspaces', () => {
+        id = this.extensionInst.mutterSettings.realTimeObj.connect('changed::dynamic-workspaces', () => {
             this.destroy(false);
             this._init();
         });
-        this.mutterSettings.add_event_id(id);
+        this.extensionInst.mutterSettings.add_event_id(id);
     }
 
     _enable_gnome_events() {
@@ -328,7 +315,7 @@ export default class Renderer {
 
             // Add a small delay to allow time for the app object to populate - for XWayland apps on Wayland
             // With those initially the normal check will pass but it's not a normal app in reality because the population of the windowObj is delayed
-            let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extSettings.get("wsb-generate-window-icon-timeout"), () => {
+            let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extensionInst.extSettings.get("wsb-generate-window-icon-timeout"), () => {
                 if (windowObj && windowObj.get_workspace() !== null && !this._is_valid_tab_list_window(windowObj)) {
                     // figure out where it is, assuming it somehow moved during the delay (picked by another event or something like added to workspace, left monitor etc. before updating the object)
                     let monitorIndex2 = windowObj.get_monitor();

@@ -1,8 +1,8 @@
 import Gio from 'gi://Gio';
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
-export function update_style(rendererInst) {
-    let baseFile = rendererInst.extensionInst.dir.get_child('stylesheet-base.css');
+export function update_style(extensionInst) {
+    let baseFile = extensionInst.dir.get_child('stylesheet-base.css');
     let [success, rawContents] = baseFile.load_contents(null);
 
     if (!success) {
@@ -13,12 +13,12 @@ export function update_style(rendererInst) {
     let text = new TextDecoder().decode(rawContents);
     let moddedText = text.replace(/\{\{(.+?)\}\}/g, (match, innerText) => {
         let settingName = match.replace(/[\{\}]/g, "");
-        return rendererInst.extSettings.get(settingName);
+        return extensionInst.extSettings.get(settingName);
     });
 
     //log(moddedText);
 
-    let stylesheetFile = rendererInst.extensionInst.dir.get_child('stylesheet.css');
+    let stylesheetFile = extensionInst.dir.get_child('stylesheet.css');
     stylesheetFile.replace_contents(
         new TextEncoder().encode(moddedText),
         null, // etag

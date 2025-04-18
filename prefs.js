@@ -15,11 +15,27 @@ export default class Prefs extends ExtensionPreferences {
 
         let workspaceButtonsPage = new Adw.PreferencesPage({title: 'STYLE: Workspace Buttons'});
 
+
+        group = new Adw.PreferencesGroup({title: _('PANEL'),});
+        rowsArr = [
+            this.get_toggle_row(settings, 'top-bar-override-height', 'Override Height', ''),
+            this.get_int_spin_row(settings, 'top-bar-height', 'Height', '', 5, 100),
+            this.get_toggle_row(settings, 'top-bar-override-color', 'Override Color', ''),
+            this.get_color_picker_row(settings, 'top-bar-color', 'Color', ''),
+            this.get_toggle_row(settings, 'top-bar-move-date-right', 'Move Date Right', '')
+        ];
+        for (let row of rowsArr) group.add(row);
+        workspaceButtonsPage.add(group);
+
+
         group = new Adw.PreferencesGroup({title: _('Workspace Buttons'),});
         rowsArr = [
             this.get_int_spin_row(settings, 'wsb-ws-btn-spacing', 'Distance Between Buttons', '', 0, 50),
             this.get_int_spin_row(settings, 'wsb-ws-btn-vert-spacing', 'Space On Top and Bottom', '', 0, 50),
-            this.get_int_spin_row(settings, 'wsb-ws-btn-roundness', 'Roundness', '', 0, 50)
+            this.get_int_spin_row(settings, 'wsb-ws-btn-roundness', 'Roundness', '', 0, 50),
+            this.get_int_spin_row(settings, 'wsb-ws-btn-border-width', 'Border Width', '', 0, 50),
+            this.get_color_picker_row(settings, 'wsb-ws-btn-border-active-color', 'Active Border Color', ''),
+            this.get_color_picker_row(settings, 'wsb-ws-btn-border-inactive-color', 'Inactive Border Color', '')
         ];
         for (let row of rowsArr) group.add(row);
         workspaceButtonsPage.add(group);
@@ -118,25 +134,26 @@ export default class Prefs extends ExtensionPreferences {
         });
     
         let colorButton = new Gtk.ColorButton({
-            rgba: this.get_rgba_color_from_hex(settings.get_string(dconfKey)),
-            valign: Gtk.Align.CENTER, // Center vertically within the row
+            rgba: this.get_rgba_color_from_string(settings.get_string(dconfKey)),
+            use_alpha: true, // Allow transparency
+            valign: Gtk.Align.CENTER,
         });
     
         colorButton.connect('color-set', cb => {
             const rgba = cb.get_rgba();
-            settings.set_string(dconfKey, this.get_hex_color_from_rgba(rgba));
+            settings.set_string(dconfKey, this.get_rgba_string_from_rgba(rgba));
         });
     
         // Add reset button
         let resetButton = new Gtk.Button({
-            icon_name: 'view-refresh-symbolic', // Refresh icon
+            icon_name: 'view-refresh-symbolic',
             tooltip_text: _('Reset to default'),
             valign: Gtk.Align.CENTER,
         });
         resetButton.connect('clicked', () => {
             const defaultValue = settings.get_default_value(dconfKey).deep_unpack();
             settings.set_string(dconfKey, defaultValue);
-            colorButton.set_rgba(this.get_rgba_color_from_hex(defaultValue));
+            colorButton.set_rgba(this.get_rgba_color_from_string(defaultValue));
         });
     
         row.add_suffix(colorButton);
@@ -144,21 +161,36 @@ export default class Prefs extends ExtensionPreferences {
         row.activatable_widget = colorButton;
     
         return row;
-    }
+    }    
     
-    // Helper: Parse a hex color string to a Gdk.RGBA object
-    get_rgba_color_from_hex(hex) {
+    // Helper: Convert a string (rgba() or hex) to a Gdk.RGBA object
+    get_rgba_color_from_string(colorString) {
         const rgba = new Gdk.RGBA();
-        rgba.parse(hex);
+
+        if (colorString.startsWith('rgba')) {
+            const match = colorString.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d*\.?\d+)\)/);
+            if (match) {
+                rgba.red = parseInt(match[1]) / 255;
+                rgba.green = parseInt(match[2]) / 255;
+                rgba.blue = parseInt(match[3]) / 255;
+                rgba.alpha = parseFloat(match[4]);
+                return rgba;
+            }
+        }
+
+        rgba.parse(colorString);
         return rgba;
     }
-    // Helper: Convert a Gdk.RGBA object to a hex string
-    get_hex_color_from_rgba(rgba) {
-        const r = Math.round(rgba.red * 255).toString(16).padStart(2, '0');
-        const g = Math.round(rgba.green * 255).toString(16).padStart(2, '0');
-        const b = Math.round(rgba.blue * 255).toString(16).padStart(2, '0');
-        return `#${r}${g}${b}`;
+
+    // Helper: Convert a Gdk.RGBA object to a CSS-style rgba() string
+    get_rgba_string_from_rgba(rgba) {
+        const r = Math.round(rgba.red * 255);
+        const g = Math.round(rgba.green * 255);
+        const b = Math.round(rgba.blue * 255);
+        const a = Math.round(rgba.alpha * 100) / 100; // Keep 2 decimal places
+        return `rgba(${r}, ${g}, ${b}, ${a})`;
     }
+
 
     get_toggle_row(settings, dconfKey, title, subtitle) {
         let row = new Adw.ActionRow({

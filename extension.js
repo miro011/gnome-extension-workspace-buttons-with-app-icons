@@ -1,19 +1,15 @@
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as AltTab from "resource:///org/gnome/shell/ui/altTab.js";
-const { Gtk, Gio, Gdk } = imports.gi;
+import Gio from "gi://Gio";
 
-
+import * as constants from "./constants.js";
 import Renderer from "./renderer.js";
+import Settings from "./settings.js";
 
 export default class WorkspaceIndicatorExtension extends Extension {
     enable() {
         Main.panel.statusArea['activities']?.hide();
-        /*let dateMenu = Main.panel.statusArea.dateMenu;
-        if (dateMenu) {
-            Main.panel._centerBox.remove_child(dateMenu.container);
-            Main.panel._rightBox.add_child(dateMenu.container);
-        }*/
     
         // Override _getWindowList to only get windows from current monitor
         this.originalGetWindowListFunc = AltTab.WindowSwitcherPopup.prototype._getWindowList;
@@ -25,18 +21,17 @@ export default class WorkspaceIndicatorExtension extends Extension {
             //log("Filtered windows:", windows.map(w => w.get_title()));
             return windows;
         };
-        
-        this.extSettingsRealTimeObj = this.getSettings();
+
+        this.extSettings = new Settings(this.getSettings(), constants.extensionSettingsInfoObj, this);
+        this.mutterSettings = new Settings(new Gio.Settings({ schema: 'org.gnome.mutter' }), constants.mutterSettingsInfoObj);
+
+        this.toggle_topbar_customizations(1);
+
         this.renderer = new Renderer(this);
     }
 
     disable() {
         Main.panel.statusArea['activities']?.show();
-        /*let dateMenu = Main.panel.statusArea.dateMenu;
-        if (dateMenu) {
-            Main.panel._rightBox.remove_child(dateMenu.container);
-            Main.panel._centerBox.insert_child_at_index(dateMenu.container, -1);
-        }*/
 
         // Restore the original _getWindowList method
         AltTab.WindowSwitcherPopup.prototype._getWindowList = this.originalGetWindowListFunc;
@@ -44,6 +39,30 @@ export default class WorkspaceIndicatorExtension extends Extension {
 
         this.renderer.destroy();
         this.renderer = null;
-        this.extSettingsRealTimeObj = null;
+        this.toggle_topbar_customizations(0);
+        this.extSettings.destroy();
+        this.extSettings = null;
+        this.mutterSettings.destroy();
+        this.mutterSettings = null;
+    }
+
+    toggle_topbar_customizations(state) {
+        let dateMenu = Main.panel.statusArea.dateMenu;
+
+        if (state === 0) {
+            if (dateMenu) {
+                try {
+                    Main.panel._rightBox.remove_child(dateMenu.container);
+                    Main.panel._centerBox.insert_child_at_index(dateMenu.container, -1);
+                }
+                catch(err) {}
+            }
+        }
+        else if (state === 1) {
+            if (dateMenu && this.extSettings.get("top-bar-move-date-right")) {
+                Main.panel._centerBox.remove_child(dateMenu.container);
+                Main.panel._rightBox.add_child(dateMenu.container);
+            }
+        }
     }
 }
