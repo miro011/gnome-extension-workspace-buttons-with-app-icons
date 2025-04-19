@@ -14,27 +14,19 @@ export default class Settings {
         this.realTimeObj = realTimeObj;
         this.infoObj = infoObj;
         this.extensionInst = extensionInst;
-        this.isExtensionSettings = (extensionInst===null) ? false : true;
         this._init();
     }
 
     // Set the non-param-dependant instance vars, populate staticObj, and add change events to all settings in infoObj (to update staticObj)
     _init() {
+        this.isExtensionSettings = (this.extensionInst===null) ? false : true;
         this.staticObj = {};
         this.eventIdsArr = [];
-        for (let settingName in this.infoObj) {
-            this._update_static_setting(settingName);
-            this._add_update_static_settings_event(settingName);
-            if (this.isExtensionSettings) {
-                this._add_style_update_event(settingName);
-            }
-        }
+        this._add_base_events();
     }
 
     destroy() {
-        this.eventIdsArr.forEach(eventId => {
-            this.realTimeObj.disconnect(eventId);
-        });
+        this._rm_all_events();
         this.eventIdsArr = null;
 
         this.realTimeObj = null;
@@ -55,12 +47,27 @@ export default class Settings {
     add_event_id(eventId) {
         this.eventIdsArr.push(eventId);
     }
+
+    _add_base_events() {
+        for (let settingName in this.infoObj) {
+            this._update_static_setting(settingName);
+            this._add_update_static_settings_event(settingName);
+            if (this.isExtensionSettings) {
+                this._add_style_update_event(settingName);
+            }
+        }
+    }
     
-    rm_all_events() {
+    _rm_all_events() {
         this.eventIdsArr.forEach(eventId => {
             this.realTimeObj.disconnect(eventId);
         });
         this.eventIdsArr = [];
+    }
+
+    reset_events() {
+        this._rm_all_events();
+        this._add_base_events();
     }
 
     _add_update_static_settings_event(settingName) {

@@ -12,23 +12,54 @@ export default class Prefs extends ExtensionPreferences {
 
         let settings = this.getSettings();
 
+        let panelPage = new Adw.PreferencesPage({title: 'PANEL'});
 
-        let workspaceButtonsPage = new Adw.PreferencesPage({title: 'STYLE: Workspace Buttons'});
-
-
-        group = new Adw.PreferencesGroup({title: _('PANEL'),});
+        group = new Adw.PreferencesGroup({title: _('Height'),});
         rowsArr = [
-            this.get_toggle_row(settings, 'top-bar-override-height', 'Override Height', ''),
-            this.get_int_spin_row(settings, 'top-bar-height', 'Height', '', 5, 100),
-            this.get_toggle_row(settings, 'top-bar-override-color', 'Override Color', ''),
-            this.get_color_picker_row(settings, 'top-bar-color', 'Color', ''),
-            this.get_toggle_row(settings, 'top-bar-move-date-right', 'Move Date Right', '')
+            this.get_toggle_row(settings, 'top-bar-override-height', 'Override', ''),
+            this.get_int_spin_row(settings, 'top-bar-height', 'Value', '', 5, 100)
         ];
+        for (let row of rowsArr) group.add(row);
+        panelPage.add(group);
+
+        group = new Adw.PreferencesGroup({title: _('Color'),});
+        rowsArr = [
+            this.get_toggle_row(settings, 'top-bar-override-color', 'Override', ''),
+            this.get_color_picker_row(settings, 'top-bar-color', 'Value', '')
+        ];
+        for (let row of rowsArr) group.add(row);
+        panelPage.add(group);
+
+        group = new Adw.PreferencesGroup({title: _('Date Menu'),});
+        rowsArr = [
+            this.get_toggle_row(settings, 'top-bar-move-date-right', 'Move Right', '')
+        ];
+        for (let row of rowsArr) group.add(row);
+        panelPage.add(group);
+
+        group = new Adw.PreferencesGroup({title: _('Status/Indicator Spacing'),});
+        rowsArr = [
+            this.get_int_spin_row(settings, 'top-bar-indicator-spacing', 'Indicator Icons', 'GLITCH: Changing this wont do anything until you change the status icons spacing below. So flip the below setting up and down to apply for now lol', 0, 50),
+            this.get_int_spin_row(settings, 'top-bar-status-spacing', 'Status Icons', '', 0, 50)
+        ];
+        for (let row of rowsArr) group.add(row);
+        panelPage.add(group);
+
+        window.add(panelPage);
+
+
+        let workspaceButtonsPage = new Adw.PreferencesPage({title: 'WSB'});
+
+        group = new Adw.PreferencesGroup({title: _('BEHAVIOR'),});
+        rowsArr = [
+            this.get_toggle_row(settings, 'wsb-container-scroll-to-switch-workspace', 'Scroll To Switch Workspace', 'Turn off to prevent conflicts with extensions that enable workspace scrolling on the whole panel.'),
+            this.get_toggle_row(settings, 'wsb-middle-click-ignores-clicked-workspace', 'Middle Click Ignores Newly Selected Workspace', 'The overview will open for the current workspace, no matter where in the container you click.'),
+            this.get_toggle_row(settings, 'wsb-right-click-ignores-clicked-workspace', 'Right Click Ignores Newly Selected Workspace', 'The window switcher will open for the current workspace, no matter where in the container you click.')
+        ]
         for (let row of rowsArr) group.add(row);
         workspaceButtonsPage.add(group);
 
-
-        group = new Adw.PreferencesGroup({title: _('Workspace Buttons'),});
+        group = new Adw.PreferencesGroup({title: _('Workspace Button'),});
         rowsArr = [
             this.get_int_spin_row(settings, 'wsb-ws-btn-spacing', 'Distance Between Buttons', '', 0, 50),
             this.get_int_spin_row(settings, 'wsb-ws-btn-vert-spacing', 'Space On Top and Bottom', '', 0, 50),
@@ -40,7 +71,7 @@ export default class Prefs extends ExtensionPreferences {
         for (let row of rowsArr) group.add(row);
         workspaceButtonsPage.add(group);
 
-        group = new Adw.PreferencesGroup({title: _('Numbers Section'),});
+        group = new Adw.PreferencesGroup({title: _('Number Section'),});
         rowsArr = [
             this.get_toggle_row(settings, 'wsb-ws-num-show', 'Show?', ''),
             this.get_int_spin_row(settings, 'wsb-ws-num-font-size', 'Font Size', '', 5, 100),
@@ -63,20 +94,20 @@ export default class Prefs extends ExtensionPreferences {
         for (let row of rowsArr) group.add(row);
         workspaceButtonsPage.add(group);
 
+        window.add(workspaceButtonsPage);
+
+        
+        let specialPage = new Adw.PreferencesPage({title: 'SPECIAL'});
 
         group = new Adw.PreferencesGroup({title: _('BEHAVIOR'),});
         rowsArr = [
-            this.get_toggle_row(settings, 'wsb-container-scroll-to-switch-workspace', 'Scroll To Switch Workspace', 'Turn off to prevent conflicts with extensions that enable workspace scrolling on the whole panel.'),
-            this.get_toggle_row(settings, 'wsb-middle-click-ignores-clicked-workspace', 'Middle Click Ignores Newly Selected Workspace', 'The overview will open for the current workspace, no matter where in the container you click.'),
-            this.get_toggle_row(settings, 'wsb-right-click-ignores-clicked-workspace', 'Right Click Ignores Newly Selected Workspace', 'The window switcher will open for the current workspace, no matter where in the container you click.'),
             this.get_int_spin_row(settings, 'wsb-generate-window-icon-timeout', 'Generate Window Icon Timeout', 'Extension uses the window-created event to detect newly opened windows, which fires instantly. On Wayland, with apps running under the xwayland layer, the icon is not available right away due to lag. To make up for this, we wait a bit. 200ms works great for me. If icons are still not properly generated for you, increase it. You can also try lowering this if you want.', 0, 1000),
+            this.get_toggle_row(settings, 'window-switcher-popup-show-windows-from-all-monitors', 'Windows Switcher Popup: Windows From All Monitors', 'One of the core features of this extension is to isolate both workspaces and monitors, but someone asked for this feature on GitHub. This setting only applies to the window switcher popup - meaning that despite the window switcher popup showing windows from all monitors, everything else is the same - the popup appears in the currently focused display, the workspace buttons and icons in them and the panels are still the same etc.'),
         ]
         for (let row of rowsArr) group.add(row);
-        workspaceButtonsPage.add(group);
+        specialPage.add(group);
 
-
-        // Add Group to Page and Page to the Window
-        window.add(workspaceButtonsPage);
+        window.add(specialPage);
 
         //window.set_default_size(750, 580);
         // comment above and uncomment below to make window adaptable

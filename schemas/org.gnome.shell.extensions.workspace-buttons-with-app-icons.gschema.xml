@@ -2,7 +2,7 @@
 <schemalist gettext-domain="gnome-shell-extensions">
   <schema path="/org/gnome/shell/extensions/workspace-buttons-with-app-icons/" id="org.gnome.shell.extensions.workspace-buttons-with-app-icons">
     <key type="b" name="top-bar-override-height">
-        <default>false</default>
+        <default>true</default>
         <summary>When this is enabled, the extension will follow the topbar height set by the extension</summary>
         <description></description>
     </key>
@@ -12,12 +12,12 @@
         <description></description>
     </key>
     <key type="b" name="top-bar-override-color">
-        <default>false</default>
+        <default>true</default>
         <summary>When this is enabled, the extension will follow the topbar color set by the extension</summary>
         <description></description>
     </key>
     <key type="s" name="top-bar-color">
-        <default>"#000000"</default>
+        <default>"rgba(0, 0, 0, 0.84)"</default>
         <summary>The custom topbar color</summary>
         <description></description>
     </key>
@@ -26,8 +26,18 @@
         <summary>Whether to move the date right</summary>
         <description></description>
     </key>
+    <key type="i" name="top-bar-indicator-spacing">
+        <default>2</default>
+        <summary>Set the indicator spacing</summary>
+        <description></description>
+    </key>
+    <key type="i" name="top-bar-status-spacing">
+        <default>4</default>
+        <summary>Set the status icon spacing</summary>
+        <description></description>
+    </key>
     <key type="i" name="wsb-ws-btn-spacing">
-        <default>5</default>
+        <default>6</default>
         <summary>The space between the workspace buttons (pixels)</summary>
         <description></description>
     </key>
@@ -42,17 +52,17 @@
         <description></description>
     </key>
     <key type="i" name="wsb-ws-btn-border-width">
-        <default>0</default>
+        <default>2</default>
         <summary>Border around the buttons</summary>
         <description></description>
     </key>
     <key type="s" name="wsb-ws-btn-border-active-color">
-        <default>"#4e6119"</default>
+        <default>"rgba(38, 162, 105, 1)"</default>
         <summary>Color of the border around the active button</summary>
         <description></description>
     </key>
     <key type="s" name="wsb-ws-btn-border-inactive-color">
-        <default>"#3d3846"</default>
+        <default>"rgba(94, 92, 100, 1)"</default>
         <summary>Color of the border around the inactive buttons</summary>
         <description></description>
     </key>
@@ -62,32 +72,32 @@
       <description></description>
     </key>
     <key type="i" name="wsb-ws-num-font-size">
-      <default>18</default>
+      <default>19</default>
       <summary>The size of the workspace number (pixels)</summary>
       <description></description>
     </key>
     <key type="i" name="wsb-ws-num-spacing">
-      <default>4</default>
+      <default>2</default>
       <summary>The padding from the workspace number left and right (pixels)</summary>
       <description></description>
     </key>
     <key type="s" name="wsb-ws-num-active-color">
-      <default>"#4e6119"</default>
+      <default>"rgba(62, 180, 46, 0.42)"</default>
       <summary>The background color for the number of the active workspace</summary>
       <description></description>
     </key>
     <key type="s" name="wsb-ws-num-inactive-color">
-      <default>"#3d3846"</default>
+      <default>"rgba(28, 27, 27, 0.75)"</default>
       <summary>The background color for the number of the inactive workspace</summary>
       <description></description>
     </key>
     <key type="i" name="wsb-ws-app-icon-size">
-      <default>26</default>
+      <default>29</default>
       <summary>The size of each icon (pixels)</summary>
       <description></description>
     </key>
     <key type="i" name="wsb-ws-app-icon-size-half">
-      <default>13</default>
+      <default>14</default>
       <summary>Don'touch! This is set by the extension scripts to one half of wsb-ws-app-icon-size.</summary>
       <description>This is used in stylesheet.css as a varialbe, so that it can set the proper min-width for the workspace icons wrapper, depending on whether workspace numbers are shown or not.</description>
     </key>
@@ -107,12 +117,12 @@
       <description></description>
     </key>
     <key type="s" name="wsb-ws-app-icons-wrapper-active-color">
-      <default>"#273600"</default>
+      <default>"rgba(62, 180, 46, 0.42)"</default>
       <summary>The background color of the inactive workspace button</summary>
       <description></description>
     </key>
     <key type="s" name="wsb-ws-app-icons-wrapper-inactive-color">
-      <default>"#241f31"</default>
+      <default>"rgba(28, 27, 27, 0.75)"</default>
       <summary>The background color of the inactive workspace button</summary>
       <description></description>
     </key>
@@ -125,7 +135,7 @@
       </description>
     </key>
     <key type="b" name="wsb-middle-click-ignores-clicked-workspace">
-      <default>false</default>
+      <default>true</default>
       <summary>Middle click always opens overview for the current workspace.</summary>
       <description>
         By default, when you middle click on another workspace, it will first switch to it and then open overview, for whichever workspace was selected.
@@ -133,7 +143,7 @@
       </description>
     </key>
     <key type="b" name="wsb-right-click-ignores-clicked-workspace">
-      <default>false</default>
+      <default>true</default>
       <summary>Right click always opens window switcher for the current workspace.</summary>
       <description>
         By default, when you right click on another workspace, it will first switch to it and then open the window switcher, for whichever workspace was selected.
@@ -147,6 +157,11 @@
         On Wayland, with apps opened under the xwayland layer icons can't be generated right away. I use the window-created event which triggers instantly when an app is opened.
         Therefore, to compensate for this, we need to wait. How much? I'm not sure. On my PC 200ms works great, but some PCs may need longer which is why this option exists.
       </description>
+    </key>
+    <key type="b" name="window-switcher-popup-show-windows-from-all-monitors">
+      <default>false</default>
+      <summary>When enabled, the window switcher menu will show windows from all monitors.</summary>
+      <description>One of the core functionalities of this extension is to isolate both workspaces and monitors, but someone asked for this feature on github. This is only for the window switcher popup.</description>
     </key>
   </schema>
 </schemalist>

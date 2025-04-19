@@ -14,7 +14,7 @@ export default class Topbars {
         // contains the style overrides that are achieved with just CSS
         this.styleOverrideKeyToCssClassObj = {
             "top-bar-override-height": "wsb-panel-class-override-height",
-            "top-bar-override-color": "wsb-panel-class-override-color"
+            "top-bar-override-color": "wsb-panel-class-override-color",
         };
         // this contains the schema keys for things that need manual handling
         this.styleOverrideKeysForManualArr = ["top-bar-move-date-right"];
@@ -25,7 +25,11 @@ export default class Topbars {
 
     destroy() {
         for (let i=0; i<this.containersArr.length; i++) {
-            if (i === this.rendererInst.mainMonitorIndex) continue;
+            this.toggle_panel_style_overrides(0, this.containersArr[i]);
+
+            if (i === this.rendererInst.mainMonitorIndex) {
+                continue;
+            }
 
             // Eject actors before destroying the container (otherwise destroy() is recursive and would wipe out the date and quick settings applets completely)
             this.containersArr[i].get_children().forEach(child => {
@@ -46,13 +50,13 @@ export default class Topbars {
     add_topbar(monitorIndex) {
         //log(`Adding topbar for index ${monitorIndex}`);
         if (monitorIndex === this.rendererInst.mainMonitorIndex) {
-            this.apply_panel_style_overrides(Main.panel);
+            this.toggle_panel_style_overrides(1, Main.panel);
             this.containersArr.push(Main.panel);
         }
         else {
             let monitorObj = Main.layoutManager.monitors[monitorIndex];
             let panel = new SidePanel(monitorObj);
-            this.apply_panel_style_overrides(panel);
+            this.toggle_panel_style_overrides(1, panel);
             this.containersArr.push(panel);
         }
 
@@ -60,19 +64,18 @@ export default class Topbars {
             let id;
             id = this.rendererInst.extensionInst.extSettings.realTimeObj.connect(`changed::${settingName}`, () => {
                 for (let panel of this.containersArr) {
-                    this.apply_panel_style_overrides(panel);
+                    this.toggle_panel_style_overrides(1, panel);
                 }
             });
             this.rendererInst.extensionInst.extSettings.add_event_id(id);
         }
     }
 
-    apply_panel_style_overrides(panel) {
+    toggle_panel_style_overrides(state, panel) {
         for (let settingName in this.styleOverrideKeyToCssClassObj) {
             let custClass = this.styleOverrideKeyToCssClassObj[settingName];
             panel.remove_style_class_name(custClass); // have to remove the style 
-
-            if (this.rendererInst.extensionInst.extSettings.get(settingName) === true) {
+            if (state === 1 && this.rendererInst.extensionInst.extSettings.get(settingName) === true) {
                 panel.add_style_class_name(custClass);
             }
         }
@@ -80,7 +83,7 @@ export default class Topbars {
         for (let settingName of this.styleOverrideKeysForManualArr) {
             if (settingName === "top-bar-move-date-right" && panel === Main.panel) {
                 let dateMenu = panel.statusArea.dateMenu;
-                if (this.rendererInst.extensionInst.extSettings.get("top-bar-move-date-right") === true) {
+                if (state === 1 && this.rendererInst.extensionInst.extSettings.get("top-bar-move-date-right") === true) {
                     try {
                         panel._centerBox.remove_child(dateMenu.container);
                         panel._rightBox.add_child(dateMenu.container);

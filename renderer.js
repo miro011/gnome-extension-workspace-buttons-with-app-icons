@@ -3,6 +3,7 @@
 import Meta from "gi://Meta";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import GLib from "gi://GLib";
+import * as AltTab from "resource:///org/gnome/shell/ui/altTab.js";
 
 import WorkspaceButtons from "./workspace-buttons.js";
 import Topbars from "./topbars.js";
@@ -15,13 +16,18 @@ export default class Renderer {
     }
 
     _init() {
-        //log("renderer => _init");
+        log("renderer => _init");
+        this._toggle_getWindowList_current_monitor_override(1);
+        this.extensionInst.extSettings.add_event_id(this.extensionInst.extSettings.realTimeObj.connect('changed::window-switcher-popup-show-windows-from-all-monitors', () => {
+            this._toggle_getWindowList_current_monitor_override(1);
+        }));
+
         this.winIdsContRepr = []; // [m0[ws0[winId, winId], ws1[winId]], m1[...]....] - same structure as the ws buttons container
         
         this.numMonitors = global.display.get_n_monitors();
         this.wssOnlyOnPrimary = (this.extensionInst.mutterSettings.get("workspaces-only-on-primary") === true) ? true : false;
         this.mainMonitorIndex = Main.layoutManager.primaryMonitor.index;
-        //log(`mainMonitorIndex=${this.mainMonitorIndex}`);
+        //log(`numMonitors=${this.numMonitors}\nwssOnlyOnPrimary=${this.wssOnlyOnPrimary}\nmainMonitorIndex=${this.mainMonitorIndex}`);
 
         this.topbars = new Topbars(this);
         this.workspaceButtons = new WorkspaceButtons(this);
@@ -38,15 +44,17 @@ export default class Renderer {
     }
 
     destroy(full=true, restorePrimaryMonitor=true) {
+        log(`renderer => destroy(${full}, ${restorePrimaryMonitor})`);
         this.topbars.destroy();
         this.topbars = null;
         this.workspaceButtons.destroy();
         this.workspaceButtons = null;
 
-        this.extensionInst.extSettings.rm_all_events();
-        this.extensionInst.mutterSettings.rm_all_events();
+        this.extensionInst.extSettings.reset_events();
+        this.extensionInst.mutterSettings.reset_events();
 
         if (full===true) {
+            this._toggle_getWindowList_current_monitor_override(0);
             this.extensionInst = null;
         }
 
@@ -93,10 +101,25 @@ export default class Renderer {
         this.mainMonitorIndex = null;
     }
 
+    _toggle_getWindowList_current_monitor_override(state) {
+        if (state === 1 && this.extensionInst.extSettings.get("window-switcher-popup-show-windows-from-all-monitors") === false) {
+            let originalGetWindowListFunc = this.extensionInst.originalGetWindowListFunc;
+            AltTab.WindowSwitcherPopup.prototype._getWindowList = function() {
+                const monitor = global.display.get_current_monitor();
+                const windows = originalGetWindowListFunc.call(this).filter(w => w.get_monitor() === monitor);
+                //log("Filtered windows:", windows.map(w => w.get_title()));
+                return windows;
+            };
+        }
+        else {
+            AltTab.WindowSwitcherPopup.prototype._getWindowList = this.extensionInst.originalGetWindowListFunc;
+        }
+    }
+
     //////////////////////////////////////
 
     _initial_population() {
-        //log("initial population");
+        log("initial population");
 
         // Monitors and creation of base elements
         for (let monitorIndex = 0; monitorIndex < this.numMonitors; monitorIndex++) {
@@ -128,6 +151,8 @@ export default class Renderer {
         }
 
         this.workspaceButtons.update_active_workspace();
+
+        //this._debug_log_structures();
     }
 
     _enable_settings_events() {
@@ -149,7 +174,7 @@ export default class Renderer {
     _enable_gnome_events() {
         this.gnomeMainEventIdsObj["layoutManager"].push(Main.layoutManager.connect('monitors-changed', () => {
             //log("monitors-changed");
-            this.destroy(false, false); // don't wanna change back to the old (saved) primary. If primary monitor was changed it could be different. Other monitor operations (add, remove) may re-write it either - I haven't tested that
+            this.destroy(false, false); // don't wanna change back to the old (saved) primary. When monitors are changed the primary monitor (if changed) is reassigned on its own
             this._init();
         }));
 
@@ -163,7 +188,7 @@ export default class Renderer {
         }));
 
         this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspace-added", (wm, wsIndex) => {
-            //log("ws added");
+            log("ws added");
             // if workspaces is only on primary, it can only be added to the main monitor, otherwise, all monitors
             if (this.wssOnlyOnPrimary) {
                 this.winIdsContRepr[this.mainMonitorIndex].splice(wsIndex, 0, []);
@@ -180,7 +205,7 @@ export default class Renderer {
         }));
 
         this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspace-removed", (wm, wsIndex) => {
-            //log("ws removed");
+            log("ws removed");
             if (this.wssOnlyOnPrimary) {
                 this.winIdsContRepr[this.mainMonitorIndex].splice(wsIndex, 1);
                 this.workspaceButtons.rm_ws_btn(this.mainMonitorIndex, wsIndex);
@@ -486,10 +511,6 @@ export default class Renderer {
         }
     
         return winIdsMeta;
-    }
-
-    _is_valid_tab_list_window(windowObj) {
-        return windowObj.get_window_type() === Meta.WindowType.NORMAL && windowObj.is_skip_taskbar() === false && windowObj.get_transient_for() === null;
     }
 
     _debug_log_structures() {

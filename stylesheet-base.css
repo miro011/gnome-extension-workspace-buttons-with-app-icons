@@ -1,3 +1,12 @@
+.panel-button {
+    -natural-hpadding: {{top-bar-indicator-spacing}}px;
+    -minimum-hpadding: {{top-bar-indicator-spacing}}px;
+}
+
+.system-status-icon {
+    margin: 0px {{top-bar-status-spacing}}px;
+}
+
 .wsb-panel-class-override-height {
     height: {{top-bar-height}}px !important;
     min-height: {{top-bar-height}}px !important;
