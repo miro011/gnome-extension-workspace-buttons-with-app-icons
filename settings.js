@@ -1,12 +1,12 @@
 // This class aims to standardize settings (both extension any anything else from dconf)
 
 // realTimeObj holds the actual object of the settings in question
-// infoObj holds the specification: {settingName: type, ...} (in this extension those are located in constants.js)
+// infoObj holds the specification: {settingName: type, ...} (in this extension those are located in globals.js)
 // staticObj holds a static representation of the key-value pairs in realTimeObj (more efficient gets)
     // it is updated any time a change to a setting in realTimeObj occurs
 // eventIdsArr as the title suggests holds the event ids for all events mapped to the realTimeObj
 
-import * as styler from "./styler.js";
+import * as globals from "./globals.js";
 
 export default class Settings {
     // Set instance variables to params provided
@@ -72,7 +72,7 @@ export default class Settings {
 
     _add_style_update_event(settingName) {
         let eventId = this.realTimeObj.connect(`changed::${settingName}`, ()=>{
-            styler.update_style(this.extensionInst);
+            globals.update_stylesheet_and_reload_style(this.extensionInst);
         });
         this.eventIdsArr.push(eventId);
     }

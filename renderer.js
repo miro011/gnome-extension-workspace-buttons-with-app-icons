@@ -6,7 +6,7 @@ import GLib from "gi://GLib";
 
 import WorkspaceButtons from "./workspace-buttons.js";
 import Topbars from "./topbars.js";
-import * as styler from "./styler.js";
+import * as globals from "./globals.js";
 
 export default class Renderer {
     constructor(extensionInst) {
@@ -16,11 +16,6 @@ export default class Renderer {
 
     _init() {
         //log("renderer => _init");
-
-        this.extensionInst.extSettings.add_event_id(this.extensionInst.extSettings.realTimeObj.connect('changed::top-bar-move-date-right', () => {
-            this.extensionInst.toggle_date_menu_position(null);
-        }));
-
         this.winIdsContRepr = []; // [m0[ws0[winId, winId], ws1[winId]], m1[...]....] - same structure as the ws buttons container
         
         this.numMonitors = global.display.get_n_monitors();
@@ -39,7 +34,7 @@ export default class Renderer {
         this._enable_settings_events();
         this._enable_gnome_events();
 
-        styler.update_style(this.extensionInst);
+        globals.update_stylesheet_and_reload_style(this.extensionInst);
     }
 
     destroy(full=true, restorePrimaryMonitor=true) {

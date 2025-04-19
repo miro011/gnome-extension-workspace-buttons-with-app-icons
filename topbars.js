@@ -3,8 +3,6 @@ import GObject from 'gi://GObject';
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
-import * as constants from "./constants.js";
-
 export default class Topbars {
     constructor(rendererInst) {
         this.rendererInst = rendererInst;
@@ -13,6 +11,16 @@ export default class Topbars {
 
     _init() {
         this.containersArr = [];
+        // contains the style overrides that are achieved with just CSS
+        this.styleOverrideKeyToCssClassObj = {
+            "top-bar-override-height": "wsb-panel-class-override-height",
+            "top-bar-override-color": "wsb-panel-class-override-color"
+        };
+        // this contains the schema keys for things that need manual handling
+        this.styleOverrideKeysForManualArr = ["top-bar-move-date-right"];
+        // an array of the keys from styleOverrideKeyToCssClassObj and items from otherStyleOverrideKeysArr for easielly adding the change event later on
+        this.allStyleOverrideKeysArr = [...Object.keys(this.styleOverrideKeyToCssClassObj), ...this.styleOverrideKeysForManualArr];
+
     }
 
     destroy() {
@@ -28,6 +36,9 @@ export default class Topbars {
         }
         this.containersArr = null;
         this.rendererInst = null;
+        this.styleOverrideKeyToCssClassObj = null;
+        this.styleOverrideKeysForManualArr = null;
+        this.allStyleOverrideKeysArr = null;
     }
 
     //////////////////////////////////////
@@ -45,7 +56,7 @@ export default class Topbars {
             this.containersArr.push(panel);
         }
 
-        for (let settingName in constants.panelStyleOverrideCorrClassObj) {
+        for (let settingName of this.allStyleOverrideKeysArr) {
             let id;
             id = this.rendererInst.extensionInst.extSettings.realTimeObj.connect(`changed::${settingName}`, () => {
                 for (let panel of this.containersArr) {
@@ -57,13 +68,32 @@ export default class Topbars {
     }
 
     apply_panel_style_overrides(panel) {
-        for (let settingName in constants.panelStyleOverrideCorrClassObj) {
-            let custClass = constants.panelStyleOverrideCorrClassObj[settingName];
+        for (let settingName in this.styleOverrideKeyToCssClassObj) {
+            let custClass = this.styleOverrideKeyToCssClassObj[settingName];
             panel.remove_style_class_name(custClass); // have to remove the style 
 
             if (this.rendererInst.extensionInst.extSettings.get(settingName) === true) {
-                let custClass = constants.panelStyleOverrideCorrClassObj[settingName];
                 panel.add_style_class_name(custClass);
+            }
+        }
+
+        for (let settingName of this.styleOverrideKeysForManualArr) {
+            if (settingName === "top-bar-move-date-right" && panel === Main.panel) {
+                let dateMenu = panel.statusArea.dateMenu;
+                if (this.rendererInst.extensionInst.extSettings.get("top-bar-move-date-right") === true) {
+                    try {
+                        panel._centerBox.remove_child(dateMenu.container);
+                        panel._rightBox.add_child(dateMenu.container);
+                    }
+                    catch(err) {}
+                }
+                else {
+                    try {
+                        panel._rightBox.remove_child(dateMenu.container);
+                        panel._centerBox.insert_child_at_index(dateMenu.container, -1);
+                    }
+                    catch(err) {}
+                }
             }
         }
     }

@@ -1,6 +1,6 @@
 .wsb-panel-class-override-height {
     height: 35px !important;
-    min-height: 35 !important;
+    min-height: 35px !important;
 }
 
 .wsb-panel-class-override-color {
@@ -16,25 +16,25 @@
 
 .wsb-ws-btn-wrapper {
     margin-right: 6px;
-    padding: 0px 0 0px 0;
+    padding: 0px 0px 0px 0px;
 }
 
 .wsb-container-wrapper .wsb-ws-btn-wrapper:last-child {
-    margin-right: 0;
+    margin-right: 0px;
 }
 
 
 .wsb-ws-num-wrapper {
     background-color: rgba(36, 31, 49, 1);
     box-sizing: border-box;
-    border-radius: 15px 0 0 15px;
-    border-top-width: 2px;
+    border-radius: 11px 0px 0px 11px;
+    border-top-width: 1px;
     border-right-width: 0px;
-    border-bottom-width: 2px;
-    border-left-width: 2px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
     border-style: solid;
     border-color: #3d3846;
-    padding: 0 3px 0 3px;
+    padding: 0 3px 0px 3px;
 }
 
 .wsb-ws-num-wrapper-active {
@@ -52,7 +52,7 @@
     box-sizing: border-box;
     border-style: solid;
     border-color: #3d3846;
-    padding: 0 5px 0 5px;
+    padding: 0 5px 0px 5px;
 }
 
 .wsb-icons-wrapper-active {
@@ -62,19 +62,19 @@
 
 .wsb-icons-wrapper-full-ws-btn-width {
     min-width: 29px;
-    border-radius: 15px 15px 15px 15px;
-    border-top-width: 2px;
-    border-right-width: 2px;
-    border-bottom-width: 2px;
-    border-left-width: 2px;
+    border-radius: 11px 11px 11px 11px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
 }
 
 .wsb-icons-wrapper-with-ws-nums {
     min-width: 14px;
-    border-radius: 0 15px 15px 0;
-    border-top-width: 2px;
-    border-right-width: 2px;
-    border-bottom-width: 2px;
+    border-radius: 0px 11px 11px 0px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
     border-left-width: 0px;
 }
 
@@ -83,5 +83,5 @@
 }
 
 .wsb-icons-wrapper .wsb-single-icon-wrapper:last-child {
-    margin-right: 0;
+    margin-right: 0px;
 }

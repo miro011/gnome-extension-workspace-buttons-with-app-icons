@@ -1,12 +1,12 @@
 import Gio from 'gi://Gio';
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
-export function update_style(extensionInst) {
+export function update_stylesheet_and_reload_style(extensionInst) {
     let baseFile = extensionInst.dir.get_child('stylesheet-base.css');
     let [success, rawContents] = baseFile.load_contents(null);
 
     if (!success) {
-        log('styler.js => Failed to read base stylesheet');
+        log('globals.js => update_stylesheet_and_reload_style => Failed to read base stylesheet');
         return;
     }
 
@@ -26,9 +26,9 @@ export function update_style(extensionInst) {
         Gio.FileCreateFlags.REPLACE_EXISTING, // Overwrite if exists, create if not
         null // cancellable
     );
-    //log('styler.js => Successfully wrote modified CSS to stylesheet.css');
+    //log('globals.js => update_stylesheet_and_reload_style => Successfully wrote modified CSS to stylesheet.css');
 
     // Reload the stylesheet
     Main.loadTheme();
-    //log('styler.js => Triggered stylesheet reload');
+    //log('globals.js => update_stylesheet_and_reload_style => Triggered stylesheet reload');
 }

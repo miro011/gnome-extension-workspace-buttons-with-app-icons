@@ -1,6 +1,6 @@
 .wsb-panel-class-override-height {
     height: {{top-bar-height}}px !important;
-    min-height: {{top-bar-height}} !important;
+    min-height: {{top-bar-height}}px !important;
 }
 
 .wsb-panel-class-override-color {
@@ -16,25 +16,25 @@
 
 .wsb-ws-btn-wrapper {
     margin-right: {{wsb-ws-btn-spacing}}px;
-    padding: {{wsb-ws-btn-vert-spacing}}px 0 {{wsb-ws-btn-vert-spacing}}px 0;
+    padding: {{wsb-ws-btn-vert-spacing}}px 0px {{wsb-ws-btn-vert-spacing}}px 0px;
 }
 
 .wsb-container-wrapper .wsb-ws-btn-wrapper:last-child {
-    margin-right: 0;
+    margin-right: 0px;
 }
 
 
 .wsb-ws-num-wrapper {
     background-color: {{wsb-ws-num-inactive-color}};
     box-sizing: border-box;
-    border-radius: {{wsb-ws-btn-roundness}}px 0 0 {{wsb-ws-btn-roundness}}px;
+    border-radius: {{wsb-ws-btn-roundness}}px 0px 0px {{wsb-ws-btn-roundness}}px;
     border-top-width: {{wsb-ws-btn-border-width}}px;
     border-right-width: 0px;
     border-bottom-width: {{wsb-ws-btn-border-width}}px;
     border-left-width: {{wsb-ws-btn-border-width}}px;
     border-style: solid;
     border-color: {{wsb-ws-btn-border-inactive-color}};
-    padding: 0 {{wsb-ws-num-spacing}}px 0 {{wsb-ws-num-spacing}}px;
+    padding: 0 {{wsb-ws-num-spacing}}px 0px {{wsb-ws-num-spacing}}px;
 }
 
 .wsb-ws-num-wrapper-active {
@@ -52,7 +52,7 @@
     box-sizing: border-box;
     border-style: solid;
     border-color: {{wsb-ws-btn-border-inactive-color}};
-    padding: 0 {{wsb-ws-app-icons-wrapper-spacing}}px 0 {{wsb-ws-app-icons-wrapper-spacing}}px;
+    padding: 0 {{wsb-ws-app-icons-wrapper-spacing}}px 0px {{wsb-ws-app-icons-wrapper-spacing}}px;
 }
 
 .wsb-icons-wrapper-active {
@@ -71,7 +71,7 @@
 
 .wsb-icons-wrapper-with-ws-nums {
     min-width: {{wsb-ws-app-icon-size-half}}px;
-    border-radius: 0 {{wsb-ws-btn-roundness}}px {{wsb-ws-btn-roundness}}px 0;
+    border-radius: 0px {{wsb-ws-btn-roundness}}px {{wsb-ws-btn-roundness}}px 0px;
     border-top-width: {{wsb-ws-btn-border-width}}px;
     border-right-width: {{wsb-ws-btn-border-width}}px;
     border-bottom-width: {{wsb-ws-btn-border-width}}px;
@@ -83,5 +83,5 @@
 }
 
 .wsb-icons-wrapper .wsb-single-icon-wrapper:last-child {
-    margin-right: 0;
+    margin-right: 0px;
 }
