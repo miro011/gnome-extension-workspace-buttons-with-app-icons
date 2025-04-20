@@ -16,7 +16,7 @@ export default class Renderer {
     }
 
     _init() {
-        log("renderer => _init");
+        //log("renderer => _init");
         this._toggle_getWindowList_current_monitor_override(1);
         this.extensionInst.extSettings.add_event_id(this.extensionInst.extSettings.realTimeObj.connect('changed::window-switcher-popup-show-windows-from-all-monitors', () => {
             this._toggle_getWindowList_current_monitor_override(1);
@@ -44,7 +44,7 @@ export default class Renderer {
     }
 
     destroy(full=true, restorePrimaryMonitor=true) {
-        log(`renderer => destroy(${full}, ${restorePrimaryMonitor})`);
+        //log(`renderer => destroy(${full}, ${restorePrimaryMonitor})`);
         this.topbars.destroy();
         this.topbars = null;
         this.workspaceButtons.destroy();
@@ -119,7 +119,7 @@ export default class Renderer {
     //////////////////////////////////////
 
     _initial_population() {
-        log("initial population");
+        //log("initial population");
 
         // Monitors and creation of base elements
         for (let monitorIndex = 0; monitorIndex < this.numMonitors; monitorIndex++) {
@@ -188,7 +188,7 @@ export default class Renderer {
         }));
 
         this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspace-added", (wm, wsIndex) => {
-            log("ws added");
+            //log("ws added");
             // if workspaces is only on primary, it can only be added to the main monitor, otherwise, all monitors
             if (this.wssOnlyOnPrimary) {
                 this.winIdsContRepr[this.mainMonitorIndex].splice(wsIndex, 0, []);
@@ -205,7 +205,7 @@ export default class Renderer {
         }));
 
         this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspace-removed", (wm, wsIndex) => {
-            log("ws removed");
+            //log("ws removed");
             if (this.wssOnlyOnPrimary) {
                 this.winIdsContRepr[this.mainMonitorIndex].splice(wsIndex, 1);
                 this.workspaceButtons.rm_ws_btn(this.mainMonitorIndex, wsIndex);

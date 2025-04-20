@@ -6,7 +6,7 @@ export function update_stylesheet_and_reload_style(extensionInst) {
     let [success, rawContents] = baseFile.load_contents(null);
 
     if (!success) {
-        log('globals.js => update_stylesheet_and_reload_style => Failed to read base stylesheet');
+        //log('globals.js => update_stylesheet_and_reload_style => Failed to read base stylesheet');
         return;
     }
 
