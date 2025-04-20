@@ -2,36 +2,35 @@
 
 import Meta from "gi://Meta";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import Gio from "gi://Gio";
 import GLib from "gi://GLib";
+import * as AltTab from "resource:///org/gnome/shell/ui/altTab.js";
 
-
-import Settings from "./settings.js";
-import * as constants from "./constants.js";
 import WorkspaceButtons from "./workspace-buttons.js";
 import Topbars from "./topbars.js";
+import * as globals from "./globals.js";
 
 export default class Renderer {
-    constructor(extSettingsRealTimeObj) {
-        this.extSettingsRealTimeObj = extSettingsRealTimeObj;
+    constructor(extensionInst) {
+        this.extensionInst = extensionInst;
         this._init();
     }
 
     _init() {
         //log("renderer => _init");
-        this.extSettings = new Settings(this.extSettingsRealTimeObj, constants.extensionSettingsInfoObj);
-        this.mutterSettingsRealTimeObj = new Gio.Settings({ schema: 'org.gnome.mutter' });
-        this.mutterSettings = new Settings(this.mutterSettingsRealTimeObj, constants.mutterSettingsInfoObj);
+        this._toggle_getWindowList_current_monitor_override(1);
+        this.extensionInst.extSettings.add_event_id(this.extensionInst.extSettings.realTimeObj.connect('changed::window-switcher-popup-show-windows-from-all-monitors', () => {
+            this._toggle_getWindowList_current_monitor_override(1);
+        }));
 
         this.winIdsContRepr = []; // [m0[ws0[winId, winId], ws1[winId]], m1[...]....] - same structure as the ws buttons container
         
         this.numMonitors = global.display.get_n_monitors();
-        this.wssOnlyOnPrimary = (this.mutterSettings.get("workspaces-only-on-primary") === true) ? true : false;
+        this.wssOnlyOnPrimary = (this.extensionInst.mutterSettings.get("workspaces-only-on-primary") === true) ? true : false;
         this.mainMonitorIndex = Main.layoutManager.primaryMonitor.index;
-        //log(`mainMonitorIndex=${this.mainMonitorIndex}`);
+        //log(`numMonitors=${this.numMonitors}\nwssOnlyOnPrimary=${this.wssOnlyOnPrimary}\nmainMonitorIndex=${this.mainMonitorIndex}`);
 
-        this.topbars = new Topbars(this.mainMonitorIndex);
-        this.workspaceButtons = new WorkspaceButtons(this.extSettingsRealTimeObj, this.extSettings, this.winIdsContRepr, this.wssOnlyOnPrimary, this.mainMonitorIndex);
+        this.topbars = new Topbars(this);
+        this.workspaceButtons = new WorkspaceButtons(this);
 
         this.gnomeGlobalEventIdsObj = {"display": [], "workspace_manager": []};
         this.gnomeMainEventIdsObj = {"layoutManager": []};
@@ -40,22 +39,24 @@ export default class Renderer {
         this._initial_population();
         this._enable_settings_events();
         this._enable_gnome_events();
+
+        globals.update_stylesheet_and_reload_style(this.extensionInst);
     }
 
     destroy(full=true, restorePrimaryMonitor=true) {
-        this.extSettings.destroy();
-        this.extSettings = null;
-        if (full===true) {
-            this.extSettingsRealTimeObj = null;
-        }
-        this.mutterSettings.destroy();
-        this.mutterSettings = null;
-        this.mutterSettingsRealTimeObj = null;
-
+        //log(`renderer => destroy(${full}, ${restorePrimaryMonitor})`);
         this.topbars.destroy();
         this.topbars = null;
         this.workspaceButtons.destroy();
         this.workspaceButtons = null;
+
+        this.extensionInst.extSettings.reset_events();
+        this.extensionInst.mutterSettings.reset_events();
+
+        if (full===true) {
+            this._toggle_getWindowList_current_monitor_override(0);
+            this.extensionInst = null;
+        }
 
         for (let component in this.gnomeMainEventIdsObj) {
             let componentObj = Main[component];
@@ -100,6 +101,21 @@ export default class Renderer {
         this.mainMonitorIndex = null;
     }
 
+    _toggle_getWindowList_current_monitor_override(state) {
+        if (state === 1 && this.extensionInst.extSettings.get("window-switcher-popup-show-windows-from-all-monitors") === false) {
+            let originalGetWindowListFunc = this.extensionInst.originalGetWindowListFunc;
+            AltTab.WindowSwitcherPopup.prototype._getWindowList = function() {
+                const monitor = global.display.get_current_monitor();
+                const windows = originalGetWindowListFunc.call(this).filter(w => w.get_monitor() === monitor);
+                //log("Filtered windows:", windows.map(w => w.get_title()));
+                return windows;
+            };
+        }
+        else {
+            AltTab.WindowSwitcherPopup.prototype._getWindowList = this.extensionInst.originalGetWindowListFunc;
+        }
+    }
+
     //////////////////////////////////////
 
     _initial_population() {
@@ -135,28 +151,30 @@ export default class Renderer {
         }
 
         this.workspaceButtons.update_active_workspace();
+
+        //this._debug_log_structures();
     }
 
     _enable_settings_events() {
         let id;
 
-        id = this.mutterSettingsRealTimeObj.connect('changed::workspaces-only-on-primary', () => {
+        id = this.extensionInst.mutterSettings.realTimeObj.connect('changed::workspaces-only-on-primary', () => {
             this.destroy(false);
             this._init();
         });
-        this.mutterSettings.add_event_id(id);
+        this.extensionInst.mutterSettings.add_event_id(id);
 
-        id = this.mutterSettingsRealTimeObj.connect('changed::dynamic-workspaces', () => {
+        id = this.extensionInst.mutterSettings.realTimeObj.connect('changed::dynamic-workspaces', () => {
             this.destroy(false);
             this._init();
         });
-        this.mutterSettings.add_event_id(id);
+        this.extensionInst.mutterSettings.add_event_id(id);
     }
 
     _enable_gnome_events() {
         this.gnomeMainEventIdsObj["layoutManager"].push(Main.layoutManager.connect('monitors-changed', () => {
             //log("monitors-changed");
-            this.destroy(false, false); // don't wanna change back to the old (saved) primary. If primary monitor was changed it could be different. Other monitor operations (add, remove) may re-write it either - I haven't tested that
+            this.destroy(false, false); // don't wanna change back to the old (saved) primary. When monitors are changed the primary monitor (if changed) is reassigned on its own
             this._init();
         }));
 
@@ -307,45 +325,30 @@ export default class Renderer {
         }));
 
         this.gnomeGlobalEventIdsObj["display"].push(global.display.connect('window-created', (display, windowObj) => {
-            if (!this._is_valid_tab_list_window(windowObj)) return;
-            //log("window created");
-
             let windowId = windowObj.get_id();
-            let monitorIndex = windowObj.get_monitor();
-            let wsIndex = windowObj.get_workspace().index();
-            // corrent wsIndex to accomodate workspaces only on primary
-            if (this.wssOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex) {
-                wsIndex = 0;
-            }
+            let workspaceObj = global.workspace_manager.get_workspace_by_index(windowObj.get_workspace().index());
 
-            //log(`adding new window with id ${windowId} to winIdsContRepr`);
-            this.winIdsContRepr[monitorIndex][wsIndex].unshift(windowId);
-            this.workspaceButtons.add_window_icon("l", windowObj, monitorIndex, wsIndex);
-            //log("added icon to container (may take a bit to show)");
-
-            // Add a small delay to allow time for the app object to populate - for XWayland apps on Wayland
-            // With those initially the normal check will pass but it's not a normal app in reality because the population of the windowObj is delayed
-            let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extSettings.get("wsb-generate-window-icon-timeout"), () => {
-                if (windowObj && windowObj.get_workspace() !== null && !this._is_valid_tab_list_window(windowObj)) {
-                    // figure out where it is, assuming it somehow moved during the delay (picked by another event or something like added to workspace, left monitor etc. before updating the object)
-                    let monitorIndex2 = windowObj.get_monitor();
-                    let wsIndex2 = windowObj.get_workspace().index();
-                    if (this.wssOnlyOnPrimary && monitorIndex2 !== this.mainMonitorIndex) {
-                        wsIndex2 = 0;
-                    }
-                    let windowIndex = this.winIdsContRepr[monitorIndex2][wsIndex2].indexOf(windowId);
-                    if (windowIndex !== -1) {
-                        // remove it
-                        this.workspaceButtons.remove_window_icon(monitorIndex2, wsIndex2, windowIndex);
-                        this.winIdsContRepr[monitorIndex2][wsIndex2].splice(windowIndex, 1);
-                    }
+            for (let windowObj of global.display.get_tab_list(Meta.TabList.NORMAL, workspaceObj)) {
+                if (windowObj.get_id() === windowId) {
+                    let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extensionInst.extSettings.get("wsb-generate-window-icon-timeout"), () => {
+                        // monitor and workspace index variables must be re-init here, as the window may have moved during this timeout
+                        let monitorIndex = windowObj.get_monitor();
+                        let wsIndex = windowObj.get_workspace().index();
+                        // corrent wsIndex to accomodate workspaces only on primary
+                        if (this.wssOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex) {
+                            wsIndex = 0;
+                        }
+                        this.winIdsContRepr[monitorIndex][wsIndex].unshift(windowId);
+                        this.workspaceButtons.add_window_icon("l", windowObj, monitorIndex, wsIndex);
+    
+                        this.glibTimeoutIdsSet.delete(timeoutId);
+                        return GLib.SOURCE_REMOVE;
+                    });
+        
+                    this.glibTimeoutIdsSet.add(timeoutId);
+                    break;
                 }
-
-                this.glibTimeoutIdsSet.delete(timeoutId);
-                return GLib.SOURCE_REMOVE;
-            });
-
-            this.glibTimeoutIdsSet.add(timeoutId);
+            }
         }));
 
         // a window leaves a monitor if it's a/ closed or b/ moved to another monitor
@@ -508,10 +511,6 @@ export default class Renderer {
         }
     
         return winIdsMeta;
-    }
-
-    _is_valid_tab_list_window(windowObj) {
-        return windowObj.get_window_type() === Meta.WindowType.NORMAL && windowObj.is_skip_taskbar() === false && windowObj.get_transient_for() === null;
     }
 
     _debug_log_structures() {

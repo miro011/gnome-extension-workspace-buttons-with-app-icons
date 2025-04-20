@@ -1,37 +1,38 @@
 // This class aims to standardize settings (both extension any anything else from dconf)
 
 // realTimeObj holds the actual object of the settings in question
-// infoObj holds the specification: {settingName: type, ...} (in this extension those are located in constants.js)
+// infoObj holds the specification: {settingName: type, ...} (in this extension those are located in globals.js)
 // staticObj holds a static representation of the key-value pairs in realTimeObj (more efficient gets)
     // it is updated any time a change to a setting in realTimeObj occurs
 // eventIdsArr as the title suggests holds the event ids for all events mapped to the realTimeObj
 
+import * as globals from "./globals.js";
+
 export default class Settings {
     // Set instance variables to params provided
-    constructor(realTimeObj, infoObj) {
+    constructor(realTimeObj, infoObj, extensionInst=null) {
         this.realTimeObj = realTimeObj;
         this.infoObj = infoObj;
+        this.extensionInst = extensionInst;
         this._init();
     }
 
     // Set the non-param-dependant instance vars, populate staticObj, and add change events to all settings in infoObj (to update staticObj)
     _init() {
+        this.isExtensionSettings = (this.extensionInst===null) ? false : true;
         this.staticObj = {};
         this.eventIdsArr = [];
-        for (let settingName in this.infoObj) {
-            this._update_static_setting(settingName);
-            this._add_update_static_settings_event(settingName);
-        }
+        this._add_base_events();
     }
 
     destroy() {
-        this.eventIdsArr.forEach(eventId => {
-            this.realTimeObj.disconnect(eventId);
-        });
+        this._rm_all_events();
         this.eventIdsArr = null;
 
         this.realTimeObj = null;
         this.infoObj = null;
+        this.extensionInst = null;
+        this.isExtensionSettings = null;
         this.staticObj = null;
     }
 
@@ -47,9 +48,38 @@ export default class Settings {
         this.eventIdsArr.push(eventId);
     }
 
+    _add_base_events() {
+        for (let settingName in this.infoObj) {
+            this._update_static_setting(settingName);
+            this._add_update_static_settings_event(settingName);
+            if (this.isExtensionSettings) {
+                this._add_style_update_event(settingName);
+            }
+        }
+    }
+    
+    _rm_all_events() {
+        this.eventIdsArr.forEach(eventId => {
+            this.realTimeObj.disconnect(eventId);
+        });
+        this.eventIdsArr = [];
+    }
+
+    reset_events() {
+        this._rm_all_events();
+        this._add_base_events();
+    }
+
     _add_update_static_settings_event(settingName) {
         let eventId = this.realTimeObj.connect(`changed::${settingName}`, ()=>{
             this._update_static_setting(settingName);
+        });
+        this.eventIdsArr.push(eventId);
+    }
+
+    _add_style_update_event(settingName) {
+        let eventId = this.realTimeObj.connect(`changed::${settingName}`, ()=>{
+            globals.update_stylesheet_and_reload_style(this.extensionInst);
         });
         this.eventIdsArr.push(eventId);
     }
