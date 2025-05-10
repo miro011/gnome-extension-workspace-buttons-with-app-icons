@@ -5,6 +5,7 @@
 
 .system-status-icon {
     margin: 0px {{top-bar-status-spacing}}px;
+    padding: 0px {{top-bar-status-spacing}}px;
 }
 
 .wsb-panel-class-override-height {

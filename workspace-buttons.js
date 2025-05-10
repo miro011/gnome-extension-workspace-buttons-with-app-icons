@@ -51,24 +51,6 @@ export default class WorkspaceButtons {
                 global.workspace_manager.get_workspace_by_index(activeWsIndex + 1).activate(global.get_current_time());
         });
 
-        containerElem.connect("button-press-event", (actor, event) => {
-            let monitorIndex = global.display.get_current_monitor();
-            Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[monitorIndex];
-
-            let btnPressed = event.get_button();
-        
-            if (btnPressed === Clutter.BUTTON_SECONDARY && this.rendererInst.extensionInst.extSettings.get("wsb-right-click-ignores-clicked-workspace")) {
-                /*let activeWsIndex = global.workspace_manager.get_active_workspace_index();
-                if (this.rendererInst.winIdsContRepr[actor.monitorIndex][activeWsIndex].length > 1) {
-                    this._show_custom_right_click_window_switcher();
-                }*/
-                this._show_custom_right_click_window_switcher();
-            }
-            else if (btnPressed === Clutter.BUTTON_MIDDLE && this.rendererInst.extensionInst.extSettings.get("wsb-middle-click-ignores-clicked-workspace")) {
-                Main.overview.toggle();
-            }
-        });
-
         return containerElem;
     }
 
@@ -96,29 +78,57 @@ export default class WorkspaceButtons {
         this.containersArr[monitorIndex].insert_child_at_index(btnWrapperElem, wsIndex);
 
         this._update_ws_numbers(monitorIndex);
+        
 
         // event
+        // actor is the element the event was originally assigned to, event is the event info - from which you can get exactly where the user clicked
         btnWrapperElem.connect("button-press-event", (actor, event) => {
+            let monitorIndex = global.display.get_current_monitor();
+            Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[monitorIndex];
+
             let btnPressed = event.get_button();
-    
+
             if (btnPressed === Clutter.BUTTON_PRIMARY) {
-                if (actor.wsIndex === global.workspace_manager.get_active_workspace_index()) {
+                let clickedWindowObj;
+                if (this.rendererInst.extensionInst.extSettings.get("wsb-left-click-activates-unfocused-app") === true) {
+                    let stage = actor.get_stage();
+                    let [x, y] = event.get_coords();
+                    let elemClicked = stage.get_actor_at_pos(Clutter.PickMode.ALL, x, y);
+                    let curElem = elemClicked;
+                    while (curElem && curElem !== actor) {
+                        if (curElem["has_style_class_name"] && curElem.has_style_class_name('wsb-single-icon-wrapper')) {
+                            // ignore if it was the first icon (the already active one that was clicked so we can enter overview if current workspace)
+                            if (this.rendererInst.winIdsContRepr[actor.monitorIndex][actor.wsIndex][0] !== curElem.windowId) {
+                                clickedWindowObj = curElem.windowObj;
+                            }
+                            break;
+                        }
+                        curElem = curElem.get_parent();
+                    }
+                }
+
+                if (actor.wsIndex === global.workspace_manager.get_active_workspace_index() && clickedWindowObj === undefined) {
                     Main.overview.toggle();
                 }
                 else {
                     global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
                 }
+
+                if (clickedWindowObj !== undefined) {
+                    clickedWindowObj.get_compositor_private().grab_key_focus(); // this must be run - otherwise the keyboard focus remains on the previous window and things get screwed up
+                    clickedWindowObj.activate(global.get_current_time());
+                }
             }
-            else if (btnPressed === Clutter.BUTTON_SECONDARY && !this.rendererInst.extensionInst.extSettings.get("wsb-right-click-ignores-clicked-workspace")) {
-                global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
-    
-                /*if (this.rendererInst.winIdsContRepr[actor.monitorIndex][actor.wsIndex].length > 1) {
-                    this._show_custom_right_click_window_switcher();
-                }*/
+            else if (btnPressed === Clutter.BUTTON_SECONDARY) {
+                if (this.rendererInst.extensionInst.extSettings.get("wsb-right-click-ignores-clicked-workspace") === false) {
+                    global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
+                }
                 this._show_custom_right_click_window_switcher();
             }
-            else if (btnPressed === Clutter.BUTTON_MIDDLE && !this.rendererInst.extensionInst.extSettings.get("wsb-middle-click-ignores-clicked-workspace")) {
-                global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
+            else if (btnPressed === Clutter.BUTTON_MIDDLE) {
+                if (this.rendererInst.extensionInst.extSettings.get("wsb-middle-click-ignores-clicked-workspace") === false) {
+                    global.workspace_manager.get_workspace_by_index(actor.wsIndex).activate(global.get_current_time());
+                }
                 Main.overview.toggle();
             }
         });
@@ -183,6 +193,7 @@ export default class WorkspaceButtons {
     _get_new_window_icon(windowObj) {
         let windowIconWrapperElem = new St.BoxLayout({ style_class: "wsb-single-icon-wrapper" });
         windowIconWrapperElem.windowId = windowObj.get_id();
+        windowIconWrapperElem.windowObj = windowObj;
         let appObj = Shell.WindowTracker.get_default().get_window_app(windowObj);
         // If the appObj is valid, add the icon texture
         if (appObj) {
