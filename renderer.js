@@ -286,7 +286,7 @@ export default class Renderer {
                     newWindowWsIndex = newWindowObj.get_workspace().index();
                 } catch(err) {}
 
-                if (newWindowId !== undefined) {
+                if (newWindowWsIndex !== undefined) {
                     for (let windowObj of global.display.get_tab_list(Meta.TabList.NORMAL, global.workspace_manager.get_workspace_by_index(newWindowWsIndex))) {
                         if (windowObj.get_id() === newWindowId) {
                             if (this.wssOnlyOnPrimary && newWindowMonitorIndex !== this.mainMonitorIndex) newWindowWsIndex = 0;
