@@ -9,8 +9,8 @@
 }
 
 .wsb-panel-class-override-height {
-    height: 30px !important;
-    min-height: 30px !important;
+    height: 32px !important;
+    min-height: 32px !important;
 }
 
 .wsb-panel-class-override-color {
@@ -53,7 +53,7 @@
 }
 
 .wsb-ws-num-label-elem {
-    font-size: 19px;
+    font-size: 22px;
 }
 
 
@@ -71,7 +71,7 @@
 }
 
 .wsb-icons-wrapper-full-ws-btn-width {
-    min-width: 28px;
+    min-width: 30px;
     border-radius: 8px 8px 8px 8px;
     border-top-width: 1px;
     border-right-width: 1px;
@@ -80,7 +80,7 @@
 }
 
 .wsb-icons-wrapper-with-ws-nums {
-    min-width: 14px;
+    min-width: 15px;
     border-radius: 0px 8px 8px 0px;
     border-top-width: 1px;
     border-right-width: 1px;
