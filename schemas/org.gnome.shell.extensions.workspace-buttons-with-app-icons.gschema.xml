@@ -150,6 +150,14 @@
         This makes it so that until you manually switch to another workspace, right clicking anywhere in the container opens the window switcher for the current workspace.
       </description>
     </key>
+    <key type="b" name="wsb-left-click-activates-unfocused-app">
+      <default>true</default>
+      <summary>Left click will activate the app that was clicked on, even on another workspace</summary>
+      <description>
+        If you click on the workspace number or the first app, the workspace will still activate as usual (or toggle overview).
+        But anything past the first app will activate the app that was clicked, even on another workspace.
+      </description>
+    </key>
     <key type="i" name="wsb-generate-window-icon-timeout">
       <default>200</default>
       <summary>The time to wait before generating an icon for a newly opened app (ms)</summary>

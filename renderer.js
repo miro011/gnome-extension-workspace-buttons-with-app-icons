@@ -25,7 +25,7 @@ export default class Renderer {
         this.winIdsContRepr = []; // [m0[ws0[winId, winId], ws1[winId]], m1[...]....] - same structure as the ws buttons container
         
         this.numMonitors = global.display.get_n_monitors();
-        this.wssOnlyOnPrimary = (this.extensionInst.mutterSettings.get("workspaces-only-on-primary") === true) ? true : false;
+        this.wssOnlyOnPrimary = this.extensionInst.mutterSettings.get("workspaces-only-on-primary");
         this.mainMonitorIndex = Main.layoutManager.primaryMonitor.index;
         //log(`numMonitors=${this.numMonitors}\nwssOnlyOnPrimary=${this.wssOnlyOnPrimary}\nmainMonitorIndex=${this.mainMonitorIndex}`);
 
@@ -223,132 +223,85 @@ export default class Renderer {
         this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspaces-reordered", () => {
             //log("workspaces-reordered");
             //this._debug_log_structures();
-            // Whether a workspace is moved left or moved right, we go left to right
-            // Going left to right, it doesn't matter is ws4 was moved left to become ws3 or ws3 was moved right to become ws4 - it's equivalent
-            // The goal here is to find the first workspace where the current windows don't match the ones in this.winIdsContRepr for that workspace
-            // and then find which workspace in this.winIdsContRepr matches them - that's how you know what got moved where
+        
+            // This event fires once per swap. The current this.winIdsContRepr is pretty much guaranteed to be up-to-date prior to the workspace reorder.
+            // Regardless if workspaces only on primary is on or off, when reordered, the tab list will change for the main monitor.
+            // To figure out which two workspaces were swapped, we compare the most recent saved window id to the current window id for the primary monitor per workspace (left to right)
+            // We find the first workspace index where the first saved window id on the primary monitor is not equal to the current, and then we find where it is.
+            // This tells us which two workspaces got swapped (left to right)
+        
+            // Figure out which two workspaces were swapped
             let numWss = global.workspace_manager.get_n_workspaces();
-            for (let wsIndex1=0; wsIndex1<numWss; wsIndex1++) {
-                let windowsPerMonitorArrWsIndex1 = this._get_ws_windows_by_monitor(wsIndex1);
-
-                let firstNeMonitorIndex = null;
-                let firstWindowIdToLookFor = null;
-                let firstWindowIdToLookForType; // cur or old - we need this to accomodate swaps between a workspace with windows and one without any
-
-                // find the first instance of an inquality
-                if (this.wssOnlyOnPrimary) {
-                    // here we only care about changes on the primary monitor
-                    let firstOldWindowId = this.winIdsContRepr[this.mainMonitorIndex][wsIndex1][0];
-                    let firstNewWindowObject = windowsPerMonitorArrWsIndex1[this.mainMonitorIndex][0];
-                    let firstNewWindowId = (firstNewWindowObject !== undefined) ? firstNewWindowObject.get_id() : undefined;
-                    if (firstNewWindowId !== firstOldWindowId) {
-                        firstNeMonitorIndex = this.mainMonitorIndex;
-                        if (firstNewWindowId === undefined) {
-                            firstWindowIdToLookFor = firstOldWindowId;
-                            firstWindowIdToLookForType = "old";
-                        }
-                        else {
-                            firstWindowIdToLookFor = firstNewWindowId;
-                            firstWindowIdToLookForType = "cur";
-                        }
-                    }
+            let wsIndex = 0;
+            let swappedWs1;
+            let notEqualSavedWindowId;
+            let swappedWs2;
+        
+            while (wsIndex<numWss) {
+                let curWindowsPerMonitor = this._get_ws_windows_by_monitor(wsIndex);
+                let savedWindowId = this.winIdsContRepr[this.mainMonitorIndex][wsIndex][0];
+                let curWindowId = curWindowsPerMonitor[this.mainMonitorIndex][0].get_id();
+                if (savedWindowId !== curWindowId) {
+                    swappedWs1 = wsIndex;
+                    notEqualSavedWindowId = savedWindowId;
                 }
-                else {
-                    for (let monitorIndex=0; monitorIndex<this.numMonitors; monitorIndex++) {
-                        let firstOldWindowId = this.winIdsContRepr[monitorIndex][wsIndex1][0];
-                        let firstNewWindowObject = windowsPerMonitorArrWsIndex1[monitorIndex][0];
-                        let firstNewWindowId = (firstNewWindowObject !== undefined) ? firstNewWindowObject.get_id() : undefined;
-                        // if we detect any imbalance on any monitor for this workspace, than this is where 
-                        if (firstNewWindowId !== firstOldWindowId) {
-                            firstNeMonitorIndex = monitorIndex;
-                            if (firstNewWindowId === undefined) {
-                                firstWindowIdToLookFor = firstOldWindowId;
-                                firstWindowIdToLookForType = "old";
-                            }
-                            else {
-                                firstWindowIdToLookFor = firstNewWindowId;
-                                firstWindowIdToLookForType = "cur";
-                            }
-                            break;
-                        }
-                    }
+                wsIndex += 1;
+                if (swappedWs1 !== undefined) break;
+            }
+        
+            if (swappedWs1 === undefined) return;
+        
+            while (wsIndex<numWss) {
+                let curWindowsPerMonitor = this._get_ws_windows_by_monitor(wsIndex);
+                let curWindowId = curWindowsPerMonitor[this.mainMonitorIndex][0].get_id();
+                if (notEqualSavedWindowId === curWindowId) {
+                    swappedWs2 = wsIndex;
+                    break;
                 }
-
-                // fix it
-                if (firstNeMonitorIndex !== null && wsIndex1+1 < numWss) {
-                    //log(`First inquality found:\nwsIndex1=${wsIndex1}\nfirstNeMonitorIndex=${firstNeMonitorIndex}\nfirstWindowIdToLookFor=${firstWindowIdToLookFor}\nfirstWindowIdToLookForType=${firstWindowIdToLookForType}`);
-                    for (let wsIndex2=wsIndex1+1; wsIndex2<numWss; wsIndex2++) {
-                        //log(`Loop workspace wsIndex2=${wsIndex2}`);
-                        // once we find a match it means that wsIndex1 and wsIndex2 were swapped
-                        if (firstWindowIdToLookForType === "cur") {
-                            let firstOldWindowId = this.winIdsContRepr[firstNeMonitorIndex][wsIndex2][0];
-                            //log(`firstOldWindowId=${firstOldWindowId}`);
-                            if (firstOldWindowId === firstWindowIdToLookFor) {
-                                // DO
-                                if (this.wssOnlyOnPrimary) {
-                                    [this.winIdsContRepr[firstNeMonitorIndex][wsIndex1], this.winIdsContRepr[firstNeMonitorIndex][wsIndex2]] = [this.winIdsContRepr[firstNeMonitorIndex][wsIndex2], this.winIdsContRepr[firstNeMonitorIndex][wsIndex1]];
-                                    this.workspaceButtons.swap_ws_btns(firstNeMonitorIndex, wsIndex1, wsIndex2);
-                                }
-                                else {
-                                    for (let monitorIndex=0; monitorIndex<this.numMonitors; monitorIndex++) {
-                                        [this.winIdsContRepr[monitorIndex][wsIndex1], this.winIdsContRepr[monitorIndex][wsIndex2]] = [this.winIdsContRepr[monitorIndex][wsIndex2], this.winIdsContRepr[monitorIndex][wsIndex1]];
-                                        this.workspaceButtons.swap_ws_btns(monitorIndex, wsIndex1, wsIndex2);
-                                    }
-                                }
-                                break;
-                            }
-                        }
-                        else {
-                            let windowsPerMonitorArrWsIndex2 = this._get_ws_windows_by_monitor(wsIndex2);
-                            let firstNewWindowObject = windowsPerMonitorArrWsIndex2[firstNeMonitorIndex][0];
-                            let firstNewWindowId = (firstNewWindowObject !== undefined) ? firstNewWindowObject.get_id() : undefined;
-                            //log(`firstNewWindowId=${firstNewWindowId}`);
-                            if (firstNewWindowId === firstWindowIdToLookFor) {
-                                // DO
-                                if (this.wssOnlyOnPrimary) {
-                                    [this.winIdsContRepr[firstNeMonitorIndex][wsIndex1], this.winIdsContRepr[firstNeMonitorIndex][wsIndex2]] = [this.winIdsContRepr[firstNeMonitorIndex][wsIndex2], this.winIdsContRepr[firstNeMonitorIndex][wsIndex1]];
-                                    this.workspaceButtons.swap_ws_btns(firstNeMonitorIndex, wsIndex1, wsIndex2);
-                                }
-                                else {
-                                    for (let monitorIndex=0; monitorIndex<this.numMonitors; monitorIndex++) {
-                                        [this.winIdsContRepr[monitorIndex][wsIndex1], this.winIdsContRepr[monitorIndex][wsIndex2]] = [this.winIdsContRepr[monitorIndex][wsIndex2], this.winIdsContRepr[monitorIndex][wsIndex1]];
-                                        this.workspaceButtons.swap_ws_btns(monitorIndex, wsIndex1, wsIndex2);
-                                    }
-                                }
-                                break;
-                            }
-                        }
-                    }
+                wsIndex += 1;
+            }
+        
+            if (swappedWs2 === undefined) return;
+        
+            // Make the changes to the structures
+            if (this.wssOnlyOnPrimary) {
+                [this.winIdsContRepr[this.mainMonitorIndex][swappedWs1], this.winIdsContRepr[this.mainMonitorIndex][swappedWs2]] = [this.winIdsContRepr[this.mainMonitorIndex][swappedWs2], this.winIdsContRepr[this.mainMonitorIndex][swappedWs1]];
+                this.workspaceButtons.swap_ws_btns(this.mainMonitorIndex, swappedWs1, swappedWs2);
+            }
+            else {
+                for (let monitorIndex=0; monitorIndex<this.numMonitors; monitorIndex++) {
+                    [this.winIdsContRepr[monitorIndex][swappedWs1], this.winIdsContRepr[monitorIndex][swappedWs2]] = [this.winIdsContRepr[monitorIndex][swappedWs2], this.winIdsContRepr[monitorIndex][swappedWs1]];
+                    this.workspaceButtons.swap_ws_btns(monitorIndex, swappedWs1, swappedWs2);
                 }
             }
             //this._debug_log_structures();
         }));
 
-        this.gnomeGlobalEventIdsObj["display"].push(global.display.connect('window-created', (display, windowObj) => {
-            let windowId = windowObj.get_id();
-            let workspaceObj = global.workspace_manager.get_workspace_by_index(windowObj.get_workspace().index());
+        this.gnomeGlobalEventIdsObj["display"].push(global.display.connect('window-created', (display, newWindowObj) => {
+            let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extensionInst.extSettings.get("wsb-generate-window-icon-timeout"), () => {
+                let newWindowId, newWindowMonitorIndex, newWindowWsIndex;
+                try {
+                    newWindowId = newWindowObj.get_id();
+                    newWindowMonitorIndex = newWindowObj.get_monitor();
+                    newWindowWsIndex = newWindowObj.get_workspace().index();
+                } catch(err) {}
 
-            for (let windowObj of global.display.get_tab_list(Meta.TabList.NORMAL, workspaceObj)) {
-                if (windowObj.get_id() === windowId) {
-                    let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extensionInst.extSettings.get("wsb-generate-window-icon-timeout"), () => {
-                        // monitor and workspace index variables must be re-init here, as the window may have moved during this timeout
-                        let monitorIndex = windowObj.get_monitor();
-                        let wsIndex = windowObj.get_workspace().index();
-                        // corrent wsIndex to accomodate workspaces only on primary
-                        if (this.wssOnlyOnPrimary && monitorIndex !== this.mainMonitorIndex) {
-                            wsIndex = 0;
+                if (newWindowWsIndex !== undefined) {
+                    for (let windowObj of global.display.get_tab_list(Meta.TabList.NORMAL, global.workspace_manager.get_workspace_by_index(newWindowWsIndex))) {
+                        if (windowObj.get_id() === newWindowId) {
+                            if (this.wssOnlyOnPrimary && newWindowMonitorIndex !== this.mainMonitorIndex) newWindowWsIndex = 0;
+                            this.winIdsContRepr[newWindowMonitorIndex][newWindowWsIndex].unshift(newWindowId);
+                            this.workspaceButtons.add_window_icon("l", newWindowObj, newWindowMonitorIndex, newWindowWsIndex);
+                            break;
                         }
-                        this.winIdsContRepr[monitorIndex][wsIndex].unshift(windowId);
-                        this.workspaceButtons.add_window_icon("l", windowObj, monitorIndex, wsIndex);
-    
-                        this.glibTimeoutIdsSet.delete(timeoutId);
-                        return GLib.SOURCE_REMOVE;
-                    });
-        
-                    this.glibTimeoutIdsSet.add(timeoutId);
-                    break;
+                    }
                 }
-            }
+
+                this.glibTimeoutIdsSet.delete(timeoutId);
+                return GLib.SOURCE_REMOVE;
+            });
+
+            this.glibTimeoutIdsSet.add(timeoutId);
         }));
 
         // a window leaves a monitor if it's a/ closed or b/ moved to another monitor

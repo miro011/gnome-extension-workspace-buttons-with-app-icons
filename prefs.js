@@ -54,7 +54,8 @@ export default class Prefs extends ExtensionPreferences {
         rowsArr = [
             this.get_toggle_row(settings, 'wsb-container-scroll-to-switch-workspace', 'Scroll To Switch Workspace', 'Turn off to prevent conflicts with extensions that enable workspace scrolling on the whole panel.'),
             this.get_toggle_row(settings, 'wsb-middle-click-ignores-clicked-workspace', 'Middle Click Ignores Newly Selected Workspace', 'The overview will open for the current workspace, no matter where in the container you click.'),
-            this.get_toggle_row(settings, 'wsb-right-click-ignores-clicked-workspace', 'Right Click Ignores Newly Selected Workspace', 'The window switcher will open for the current workspace, no matter where in the container you click.')
+            this.get_toggle_row(settings, 'wsb-right-click-ignores-clicked-workspace', 'Right Click Ignores Newly Selected Workspace', 'The window switcher will open for the current workspace, no matter where in the container you click.'),
+            this.get_toggle_row(settings, 'wsb-left-click-activates-unfocused-app', 'Left Click Activates Unfocused App', 'With this enabled, if you click on any app past the first app (in the current or another workspace), it will focus it (and switch workspace if needed). Otherwise, clicking on the workspace number, or the first app will switch to that workspace without touching anything (or open overview if already active).')
         ]
         for (let row of rowsArr) group.add(row);
         workspaceButtonsPage.add(group);
