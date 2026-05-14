@@ -128,7 +128,7 @@ class SidePanel extends St.Widget {
 
         Main.uiGroup.add_child(this);
         Main.layoutManager.addChrome(this, {
-            affectsInputRegion: true,
+            //affectsInputRegion: true,
             affectsStruts: true, // **Important: This makes Mutter respect it**
         });
         this.set_position(this._monitor.x, this._monitor.y);
