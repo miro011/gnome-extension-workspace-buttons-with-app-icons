@@ -166,6 +166,11 @@
         Therefore, to compensate for this, we need to wait. How much? I'm not sure. On my PC 200ms works great, but some PCs may need longer which is why this option exists.
       </description>
     </key>
+    <key type="b" name="wsb-periodic-reconcile">
+      <default>true</default>
+      <summary>Periodically repair workspace icons that have drifted from the real window layout</summary>
+      <description>Every 30 seconds, compare the cached window icons with Mutter and fix any differences. The check does no widget work when the layout already matches.</description>
+    </key>
     <key type="b" name="window-switcher-popup-show-windows-from-all-monitors">
       <default>false</default>
       <summary>When enabled, the window switcher menu will show windows from all monitors.</summary>

@@ -103,6 +103,7 @@ export default class Prefs extends ExtensionPreferences {
         group = new Adw.PreferencesGroup({title: _('BEHAVIOR'),});
         rowsArr = [
             this.get_int_spin_row(settings, 'wsb-generate-window-icon-timeout', 'Generate Window Icon Timeout', 'Extension uses the window-created event to detect newly opened windows, which fires instantly. On Wayland, with apps running under the xwayland layer, the icon is not available right away due to lag. To make up for this, we wait a bit. 200ms works great for me. If icons are still not properly generated for you, increase it. You can also try lowering this if you want.', 0, 1000),
+            this.get_toggle_row(settings, 'wsb-periodic-reconcile', 'Repair Drifted Icons', 'Every 30 seconds, put an icon back on the right workspace if it has drifted. The check does nothing when the icons already match.'),
             this.get_toggle_row(settings, 'window-switcher-popup-show-windows-from-all-monitors', 'Windows Switcher Popup: Windows From All Monitors', 'One of the core features of this extension is to isolate both workspaces and monitors, but someone asked for this feature on GitHub. This setting only applies to the window switcher popup - meaning that despite the window switcher popup showing windows from all monitors, everything else is the same - the popup appears in the currently focused display, the workspace buttons and icons in them and the panels are still the same etc.'),
         ]
         for (let row of rowsArr) group.add(row);
