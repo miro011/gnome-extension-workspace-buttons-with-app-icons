@@ -41,7 +41,6 @@ export default class Renderer {
             }
         }
         
-
         this.topbars = new Topbars(this);
         this.workspaceButtons = new WorkspaceButtons(this);
 
@@ -52,6 +51,11 @@ export default class Renderer {
         this._initial_population();
         this._enable_settings_events();
         this._enable_gnome_events();
+
+        this.workspaceOrder = []; // aid for workspace-swapped
+        for (let i = 0; i < global.workspace_manager.get_n_workspaces(); i++) {
+            this.workspaceOrder.push(global.workspace_manager.get_workspace_by_index(i));
+        }
 
         globals.update_stylesheet_and_reload_style(this.extensionInst);
     }
@@ -112,6 +116,7 @@ export default class Renderer {
             Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[this.mainMonitorIndex];
         }
         this.mainMonitorIndex = null;
+        this.workspaceOrder = null;
     }
 
     _toggle_getWindowList_current_monitor_override(state) {
@@ -243,54 +248,44 @@ export default class Renderer {
             // We find the first workspace index where the first saved window id on the primary monitor is not equal to the current, and then we find where it is.
             // This tells us which two workspaces got swapped (left to right)
         
-            // Figure out which two workspaces were swapped
-            let numWss = global.workspace_manager.get_n_workspaces();
-            let wsIndex = 0;
-            let swappedWs1;
-            let notEqualSavedWindowId;
-            let swappedWs2;
-        
-            while (wsIndex<numWss) {
-                let curWindowsPerMonitor = this._get_ws_windows_by_monitor(wsIndex);
-                let savedWindowId = this.winIdsContRepr[this.mainMonitorIndex][wsIndex][0];
-                let curWindowId = curWindowsPerMonitor[this.mainMonitorIndex][0].get_id();
-                if (savedWindowId !== curWindowId) {
-                    swappedWs1 = wsIndex;
-                    notEqualSavedWindowId = savedWindowId;
-                }
-                wsIndex += 1;
-                if (swappedWs1 !== undefined) break;
+            let newWorkspaceOrder = []; // aid for workspace-swapped
+            for (let i = 0; i < global.workspace_manager.get_n_workspaces(); i++) {
+                newWorkspaceOrder.push(global.workspace_manager.get_workspace_by_index(i));
             }
-        
-            if (swappedWs1 === undefined) return;
-        
-            while (wsIndex<numWss) {
-                let curWindowsPerMonitor = this._get_ws_windows_by_monitor(wsIndex);
-                let curWindowId = curWindowsPerMonitor[this.mainMonitorIndex][0].get_id();
-                if (notEqualSavedWindowId === curWindowId) {
-                    swappedWs2 = wsIndex;
-                    break;
+
+            let swappedWsIndex1;
+            let swappedWsIndex2;
+
+            for (let i = 0; i < newWorkspaceOrder.length; i++) {
+                if (this.workspaceOrder[i] !== newWorkspaceOrder[i]) {
+                    if (swappedWsIndex1 === undefined) {
+                        swappedWsIndex1 = i;
+                    }
+                    else {
+                        swappedWsIndex2 = i;
+                        break;
+                    }
                 }
-                wsIndex += 1;
             }
-        
-            if (swappedWs2 === undefined) return;
+
+            this.workspaceOrder = newWorkspaceOrder;
         
             // Make the changes to the structures
             if (this.wssOnlyOnPrimary) {
-                [this.winIdsContRepr[this.mainMonitorIndex][swappedWs1], this.winIdsContRepr[this.mainMonitorIndex][swappedWs2]] = [this.winIdsContRepr[this.mainMonitorIndex][swappedWs2], this.winIdsContRepr[this.mainMonitorIndex][swappedWs1]];
-                this.workspaceButtons.swap_ws_btns(this.mainMonitorIndex, swappedWs1, swappedWs2);
+                [this.winIdsContRepr[this.mainMonitorIndex][swappedWsIndex1], this.winIdsContRepr[this.mainMonitorIndex][swappedWsIndex2]] = [this.winIdsContRepr[this.mainMonitorIndex][swappedWsIndex2], this.winIdsContRepr[this.mainMonitorIndex][swappedWsIndex1]];
+                this.workspaceButtons.swap_ws_btns(this.mainMonitorIndex, swappedWsIndex1, swappedWsIndex2);
             }
             else {
                 for (let monitorIndex=0; monitorIndex<this.numMonitors; monitorIndex++) {
-                    [this.winIdsContRepr[monitorIndex][swappedWs1], this.winIdsContRepr[monitorIndex][swappedWs2]] = [this.winIdsContRepr[monitorIndex][swappedWs2], this.winIdsContRepr[monitorIndex][swappedWs1]];
-                    this.workspaceButtons.swap_ws_btns(monitorIndex, swappedWs1, swappedWs2);
+                    [this.winIdsContRepr[monitorIndex][swappedWsIndex1], this.winIdsContRepr[monitorIndex][swappedWsIndex2]] = [this.winIdsContRepr[monitorIndex][swappedWsIndex2], this.winIdsContRepr[monitorIndex][swappedWsIndex1]];
+                    this.workspaceButtons.swap_ws_btns(monitorIndex, swappedWsIndex1, swappedWsIndex2);
                 }
             }
             //this._debug_log_structures();
         }));
 
         this.gnomeGlobalEventIdsObj["display"].push(global.display.connect('window-created', (display, newWindowObj) => {
+            //log("window-created");
             let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extensionInst.extSettings.get("wsb-generate-window-icon-timeout"), () => {
                 let newWindowId, newWindowMonitorIndex, newWindowWsIndex;
                 try {
@@ -359,6 +354,7 @@ export default class Renderer {
 
         // Here, we're only concenred about focus changes of EXISTING windows on the SAME MONITOR AND WORKSPACE
         this.gnomeGlobalEventIdsObj["display"].push(global.display.connect("notify::focus-window", () => {
+            //log("focus-changed");
             let newlyFocusedWindowObj = global.display.focus_window;
             if (!newlyFocusedWindowObj) return; // if last window in a workspace (empty workspace) is closed event will fire but there will be no focused window
 
