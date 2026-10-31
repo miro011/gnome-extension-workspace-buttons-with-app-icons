@@ -32,3 +32,7 @@ export function update_stylesheet_and_reload_style(extensionInst) {
     Main.loadTheme();
     //log('globals.js => update_stylesheet_and_reload_style => Triggered stylesheet reload');
 }
+
+export function delay(durationMs) {
+    return new Promise(resolve => setTimeout(resolve, durationMs));
+}

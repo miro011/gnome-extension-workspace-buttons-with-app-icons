@@ -15,7 +15,7 @@ export default class Renderer {
         this._init();
     }
 
-    _init() {
+    async _init() {
         //log("renderer => _init");
         this._toggle_getWindowList_current_monitor_override(1);
         this.extensionInst.extSettings.add_event_id(this.extensionInst.extSettings.realTimeObj.connect('changed::window-switcher-popup-show-windows-from-all-monitors', () => {
@@ -24,10 +24,23 @@ export default class Renderer {
 
         this.winIdsContRepr = []; // [m0[ws0[winId, winId], ws1[winId]], m1[...]....] - same structure as the ws buttons container
         
-        this.numMonitors = global.display.get_n_monitors();
-        this.wssOnlyOnPrimary = this.extensionInst.mutterSettings.get("workspaces-only-on-primary");
-        this.mainMonitorIndex = Main.layoutManager.primaryMonitor.index;
-        //log(`numMonitors=${this.numMonitors}\nwssOnlyOnPrimary=${this.wssOnlyOnPrimary}\nmainMonitorIndex=${this.mainMonitorIndex}`);
+        // when testing mainMonitorIndex fails to initialize (dbus-run-session -- gnome-shell --devkit --wayland), so the solution is try over and over till present
+        this.numMonitors = null;
+        this.wssOnlyOnPrimary = null;
+        this.mainMonitorIndex = null;
+        while (true) {
+            try {
+                this.numMonitors = global.display.get_n_monitors();
+                this.wssOnlyOnPrimary = this.extensionInst.mutterSettings.get("workspaces-only-on-primary");
+                this.mainMonitorIndex = Main.layoutManager.primaryMonitor.index;
+                //log(`numMonitors=${this.numMonitors}\nwssOnlyOnPrimary=${this.wssOnlyOnPrimary}\nmainMonitorIndex=${this.mainMonitorIndex}`);
+                break;
+            } catch(err) {
+                await globals.delay(500);
+                continue;
+            }
+        }
+        
 
         this.topbars = new Topbars(this);
         this.workspaceButtons = new WorkspaceButtons(this);
