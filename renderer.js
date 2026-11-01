@@ -47,6 +47,7 @@ export default class Renderer {
             this.numMonitors = null;
             this.wssOnlyOnPrimary = null;
             this.mainMonitorIndex = null;
+            return;
         }
         
         this.topbars = new Topbars(this);
@@ -58,11 +59,6 @@ export default class Renderer {
         this._initial_population();
         this._enable_settings_events();
         this._enable_gnome_events();
-
-        this.workspaceOrder = []; // aid for workspace-swapped
-        for (let i = 0; i < global.workspace_manager.get_n_workspaces(); i++) {
-            this.workspaceOrder.push(global.workspace_manager.get_workspace_by_index(i));
-        }
 
         globals.update_stylesheet_and_reload_style(this.extensionInst);
     }
@@ -117,7 +113,6 @@ export default class Renderer {
             Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[this.mainMonitorIndex];
         }
         this.mainMonitorIndex = null;
-        this.workspaceOrder = null;
     }
 
     _toggle_getWindowList_current_monitor_override(state) {
@@ -223,7 +218,6 @@ export default class Renderer {
                     this.workspaceButtons.add_ws_btn(monitorIndex, wsIndex);
                 }
             }
-            this.workspaceOrder.splice(wsIndex, 0, global.workspace_manager.get_workspace_by_index(wsIndex));
             this._add_window_added_event_to_workspace(wsIndex);
             //this._debug_log_structures();
         }));
@@ -241,7 +235,6 @@ export default class Renderer {
                     this.workspaceButtons.rm_ws_btn(monitorIndex, wsIndex);
                 }
             }
-            this.workspaceOrder.splice(wsIndex, 1);
             this.workspaceButtons.update_active_workspace();
             //this._debug_log_structures();
         }));
