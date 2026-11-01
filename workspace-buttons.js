@@ -195,18 +195,12 @@ export default class WorkspaceButtons {
         windowIconWrapperElem.windowId = windowObj.get_id();
         windowIconWrapperElem.windowObj = windowObj;
         let appObj = Shell.WindowTracker.get_default().get_window_app(windowObj);
-        // If the appObj is valid, add the icon texture
-        if (appObj) {
-            let appIcon = appObj.create_icon_texture(this.rendererInst.extensionInst.extSettings.get('wsb-ws-app-icon-size'));
-            if (this.rendererInst.extensionInst.extSettings.get("wsb-ws-app-icons-desaturate")) {
-                appIcon.add_effect(new Clutter.DesaturateEffect());
-            }
-            windowIconWrapperElem.add_child(appIcon);
-        } else {
-            // Fallback icon if the appObj is not found
-            let placeholderIcon = new St.Icon({ icon_name: 'image-missing-symbolic', icon_size: this.rendererInst.extensionInst.extSettings.get('wsb-ws-app-icon-size') });
-            windowIconWrapperElem.add_child(placeholderIcon);
+        
+        let appIcon = appObj.create_icon_texture(this.rendererInst.extensionInst.extSettings.get('wsb-ws-app-icon-size'));
+        if (this.rendererInst.extensionInst.extSettings.get("wsb-ws-app-icons-desaturate")) {
+            appIcon.add_effect(new Clutter.DesaturateEffect());
         }
+        windowIconWrapperElem.add_child(appIcon);
     
         return windowIconWrapperElem;
     }
@@ -311,11 +305,6 @@ export default class WorkspaceButtons {
         this.rendererInst.extensionInst.extSettings.add_event_id(id);
 
         id = this.rendererInst.extensionInst.extSettings.realTimeObj.connect('changed::wsb-ws-app-icons-desaturate', () => {
-            this._regenerate_icons();
-        });
-        this.rendererInst.extensionInst.extSettings.add_event_id(id);
-
-        id = this.rendererInst.extensionInst.extSettings.realTimeObj.connect('changed::wsb-generate-window-icon-timeout', () => {
             this._regenerate_icons();
         });
         this.rendererInst.extensionInst.extSettings.add_event_id(id);

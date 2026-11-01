@@ -158,14 +158,6 @@
         But anything past the first app will activate the app that was clicked, even on another workspace.
       </description>
     </key>
-    <key type="i" name="wsb-generate-window-icon-timeout">
-      <default>200</default>
-      <summary>The time to wait before generating an icon for a newly opened app (ms)</summary>
-      <description>
-        On Wayland, with apps opened under the xwayland layer icons can't be generated right away. I use the window-created event which triggers instantly when an app is opened.
-        Therefore, to compensate for this, we need to wait. How much? I'm not sure. On my PC 200ms works great, but some PCs may need longer which is why this option exists.
-      </description>
-    </key>
     <key type="b" name="window-switcher-popup-show-windows-from-all-monitors">
       <default>false</default>
       <summary>When enabled, the window switcher menu will show windows from all monitors.</summary>

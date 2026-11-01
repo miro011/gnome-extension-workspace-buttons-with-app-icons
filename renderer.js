@@ -2,9 +2,8 @@
 
 import Meta from "gi://Meta";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import GLib from "gi://GLib";
 import * as AltTab from "resource:///org/gnome/shell/ui/altTab.js";
-
+import Shell from "gi://Shell";
 import WorkspaceButtons from "./workspace-buttons.js";
 import Topbars from "./topbars.js";
 import * as globals from "./globals.js";
@@ -28,17 +27,26 @@ export default class Renderer {
         this.numMonitors = null;
         this.wssOnlyOnPrimary = null;
         this.mainMonitorIndex = null;
-        while (true) {
+        let success = false;
+        for (let msWait=0; msWait<10000; msWait+=500) {
             try {
                 this.numMonitors = global.display.get_n_monitors();
                 this.wssOnlyOnPrimary = this.extensionInst.mutterSettings.get("workspaces-only-on-primary");
                 this.mainMonitorIndex = Main.layoutManager.primaryMonitor.index;
                 //log(`numMonitors=${this.numMonitors}\nwssOnlyOnPrimary=${this.wssOnlyOnPrimary}\nmainMonitorIndex=${this.mainMonitorIndex}`);
+                success = true;
                 break;
             } catch(err) {
                 await globals.delay(500);
                 continue;
             }
+        }
+        if (!success) {
+            this._toggle_getWindowList_current_monitor_override(0);
+            this.winIdsContRepr = null;
+            this.numMonitors = null;
+            this.wssOnlyOnPrimary = null;
+            this.mainMonitorIndex = null;
         }
         
         this.topbars = new Topbars(this);
@@ -46,7 +54,6 @@ export default class Renderer {
 
         this.gnomeGlobalEventIdsObj = {"display": [], "workspace_manager": []};
         this.gnomeMainEventIdsObj = {"layoutManager": []};
-        this.glibTimeoutIdsSet = new Set();
         
         this._initial_population();
         this._enable_settings_events();
@@ -92,12 +99,6 @@ export default class Renderer {
             }
         }
         this.gnomeGlobalEventIdsObj = null;
-
-        for (let timeoutId of this.glibTimeoutIdsSet) {
-            GLib.Source.remove(timeoutId);
-        }
-        this.glibTimeoutIdsSet.clear();
-        this.glibTimeoutIdsSet = null;
         
         // for the workspaces that remain, we wanna clean up the window added event
         for (let wsIndex=0; wsIndex<global.workspace_manager.get_n_workspaces(); wsIndex++) {
@@ -197,16 +198,20 @@ export default class Renderer {
         }));
 
         this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("active-workspace-changed", () => {
+            //log("active-workspace-changed");
+            //this._debug_log_structures();
             if (this.wssOnlyOnPrimary) {
                 // fixes a bug where when workspaces is only on primary and workspace is switched while the non-primary monitor is focused, the workspace switched to has the window from the pvevious workspace (on the main monitor)
                 // this happens exactly because when the other monitor is focused this extension overwrites Main.layoutManager.primaryMonitor - so we just need to restore it
                 Main.layoutManager.primaryMonitor = Main.layoutManager.monitors[this.mainMonitorIndex];
             }
             this.workspaceButtons.update_active_workspace();
+            //this._debug_log_structures();
         }));
 
         this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspace-added", (wm, wsIndex) => {
             //log("ws added");
+            //this._debug_log_structures();
             // if workspaces is only on primary, it can only be added to the main monitor, otherwise, all monitors
             if (this.wssOnlyOnPrimary) {
                 this.winIdsContRepr[this.mainMonitorIndex].splice(wsIndex, 0, []);
@@ -218,12 +223,14 @@ export default class Renderer {
                     this.workspaceButtons.add_ws_btn(monitorIndex, wsIndex);
                 }
             }
-
+            this.workspaceOrder.splice(wsIndex, 0, global.workspace_manager.get_workspace_by_index(wsIndex));
             this._add_window_added_event_to_workspace(wsIndex);
+            //this._debug_log_structures();
         }));
 
         this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspace-removed", (wm, wsIndex) => {
             //log("ws removed");
+            //this._debug_log_structures();
             if (this.wssOnlyOnPrimary) {
                 this.winIdsContRepr[this.mainMonitorIndex].splice(wsIndex, 1);
                 this.workspaceButtons.rm_ws_btn(this.mainMonitorIndex, wsIndex);
@@ -234,82 +241,66 @@ export default class Renderer {
                     this.workspaceButtons.rm_ws_btn(monitorIndex, wsIndex);
                 }
             }
-
+            this.workspaceOrder.splice(wsIndex, 1);
             this.workspaceButtons.update_active_workspace();
+            //this._debug_log_structures();
         }));
         
         this.gnomeGlobalEventIdsObj["workspace_manager"].push(global.workspace_manager.connect("workspaces-reordered", () => {
             //log("workspaces-reordered");
             //this._debug_log_structures();
-        
-            // This event fires once per swap. The current this.winIdsContRepr is pretty much guaranteed to be up-to-date prior to the workspace reorder.
-            // Regardless if workspaces only on primary is on or off, when reordered, the tab list will change for the main monitor.
-            // To figure out which two workspaces were swapped, we compare the most recent saved window id to the current window id for the primary monitor per workspace (left to right)
-            // We find the first workspace index where the first saved window id on the primary monitor is not equal to the current, and then we find where it is.
-            // This tells us which two workspaces got swapped (left to right)
-        
-            let newWorkspaceOrder = []; // aid for workspace-swapped
-            for (let i = 0; i < global.workspace_manager.get_n_workspaces(); i++) {
-                newWorkspaceOrder.push(global.workspace_manager.get_workspace_by_index(i));
-            }
-
-            let swappedWsIndex1;
-            let swappedWsIndex2;
-
-            for (let i = 0; i < newWorkspaceOrder.length; i++) {
-                if (this.workspaceOrder[i] !== newWorkspaceOrder[i]) {
-                    if (swappedWsIndex1 === undefined) {
-                        swappedWsIndex1 = i;
-                    }
-                    else {
-                        swappedWsIndex2 = i;
-                        break;
-                    }
-                }
-            }
-
-            this.workspaceOrder = newWorkspaceOrder;
-        
-            // Make the changes to the structures
-            if (this.wssOnlyOnPrimary) {
-                [this.winIdsContRepr[this.mainMonitorIndex][swappedWsIndex1], this.winIdsContRepr[this.mainMonitorIndex][swappedWsIndex2]] = [this.winIdsContRepr[this.mainMonitorIndex][swappedWsIndex2], this.winIdsContRepr[this.mainMonitorIndex][swappedWsIndex1]];
-                this.workspaceButtons.swap_ws_btns(this.mainMonitorIndex, swappedWsIndex1, swappedWsIndex2);
-            }
-            else {
-                for (let monitorIndex=0; monitorIndex<this.numMonitors; monitorIndex++) {
-                    [this.winIdsContRepr[monitorIndex][swappedWsIndex1], this.winIdsContRepr[monitorIndex][swappedWsIndex2]] = [this.winIdsContRepr[monitorIndex][swappedWsIndex2], this.winIdsContRepr[monitorIndex][swappedWsIndex1]];
-                    this.workspaceButtons.swap_ws_btns(monitorIndex, swappedWsIndex1, swappedWsIndex2);
-                }
-            }
+            this.destroy(false, false);
+            this._init();
             //this._debug_log_structures();
         }));
 
-        this.gnomeGlobalEventIdsObj["display"].push(global.display.connect('window-created', (display, newWindowObj) => {
+        this.gnomeGlobalEventIdsObj["display"].push(global.display.connect('window-created', async (display, newWindowObj) => {
             //log("window-created");
-            let timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, this.extensionInst.extSettings.get("wsb-generate-window-icon-timeout"), () => {
-                let newWindowId, newWindowMonitorIndex, newWindowWsIndex;
+            //this._debug_log_structures();
+            let newWindowId, newWindowMonitorIndex, newWindowWsIndex;
+            let success = false;
+            for (let msWait=0; msWait<10000; msWait+=50) {
+                // Check if destroy() was called while waiting
+                if (!this.winIdsContRepr) return;
+
                 try {
                     newWindowId = newWindowObj.get_id();
                     newWindowMonitorIndex = newWindowObj.get_monitor();
                     newWindowWsIndex = newWindowObj.get_workspace().index();
-                } catch(err) {}
 
-                if (newWindowWsIndex !== undefined) {
-                    for (let windowObj of global.display.get_tab_list(Meta.TabList.NORMAL, global.workspace_manager.get_workspace_by_index(newWindowWsIndex))) {
-                        if (windowObj.get_id() === newWindowId) {
-                            if (this.wssOnlyOnPrimary && newWindowMonitorIndex !== this.mainMonitorIndex) newWindowWsIndex = 0;
-                            this.winIdsContRepr[newWindowMonitorIndex][newWindowWsIndex].unshift(newWindowId);
-                            this.workspaceButtons.add_window_icon("l", newWindowObj, newWindowMonitorIndex, newWindowWsIndex);
-                            break;
-                        }
+                    if (newWindowId === undefined || newWindowMonitorIndex === undefined || newWindowWsIndex === undefined) {
+                        throw new Error("Window properties not ready");
                     }
+                    if (newWindowMonitorIndex < 0) {
+                        return; // window was rapidly closed before this loop could fullfil
+                    }
+
+                    let appObj = Shell.WindowTracker.get_default().get_window_app(newWindowObj); // test icon
+                    if (!appObj || !appObj.get_app_info() || (appObj.get_id && appObj.get_id().includes('fallback'))) {
+                        throw new Error("Window icon/app not ready");
+                    }
+
+                    success = true;
+                    break;
                 }
+                catch(err) {
+                    await globals.delay(50);
+                    continue;
+                }
+            }
+            if (!success) {
+                this.destroy(false, false);
+            }
 
-                this.glibTimeoutIdsSet.delete(timeoutId);
-                return GLib.SOURCE_REMOVE;
-            });
-
-            this.glibTimeoutIdsSet.add(timeoutId);
+            for (let windowObj of global.display.get_tab_list(Meta.TabList.NORMAL, global.workspace_manager.get_workspace_by_index(newWindowWsIndex))) {
+                if (windowObj.get_id() === newWindowId) {
+                    if (this.wssOnlyOnPrimary && newWindowMonitorIndex !== this.mainMonitorIndex) newWindowWsIndex = 0;
+                    this.winIdsContRepr[newWindowMonitorIndex][newWindowWsIndex].unshift(newWindowId);
+                    this.workspaceButtons.add_window_icon("l", newWindowObj, newWindowMonitorIndex, newWindowWsIndex);
+                    break;
+                }
+            }
+            //this._debug_log_structures();
         }));
 
         // a window leaves a monitor if it's a/ closed or b/ moved to another monitor
@@ -318,6 +309,7 @@ export default class Renderer {
         this.gnomeGlobalEventIdsObj["display"].push(global.display.connect('window-left-monitor', (display, oldMonitorIndex, windowObj) => {
             // don't want to check normal here in case a not normal window posing as normal (beore window object fully loading on wayland under xwayland)
             //log("window left monitor");
+            //this._debug_log_structures();
 
             let winIdsMeta = this._get_winIdsMeta();
             
@@ -349,6 +341,8 @@ export default class Renderer {
                 this.winIdsContRepr[oldMonitorIndex][oldWsIndex].splice(oldWindowIndex, 1);
                 this.winIdsContRepr[newMonitorIndex][newWsIndex].unshift(windowId);
             }
+
+            //this._debug_log_structures();
         }));
         
 
@@ -427,7 +421,8 @@ export default class Renderer {
         let workspaceObject = global.workspace_manager.get_workspace_by_index(wsIndex);
 
         workspaceObject._windowAddedEventId = workspaceObject.connect('window-added', (workspaceObj, windowObj) => {
-            //log("window added to workspace")
+            //log("window added to workspace");
+            //this._debug_log_structures();
 
             let windowId = windowObj.get_id();
             let winIdsMeta = this._get_winIdsMeta();
@@ -450,6 +445,8 @@ export default class Renderer {
             this.workspaceButtons.move_window_icon(oldMonitorIndex, oldWsIndex, oldWindowIndex, newMonitorIndex, newWsIndex, 0);
             this.winIdsContRepr[oldMonitorIndex][oldWsIndex].splice(oldWindowIndex, 1);
             this.winIdsContRepr[newMonitorIndex][newWsIndex].unshift(windowId);
+
+            //this._debug_log_structures();
         });
     }
 
@@ -476,9 +473,9 @@ export default class Renderer {
     }
 
     _debug_log_structures() {
-        log("winIdsContRepr");
-        log(this.winIdsContRepr);
-        log("workspaceButtons.debug_get_container_representation_array()");
+        //log("winIdsContRepr");
+        //log(this.winIdsContRepr);
+        //log("workspaceButtons.debug_get_container_representation_array()");
         log(this.workspaceButtons.debug_get_container_representation_array());
     }
 }

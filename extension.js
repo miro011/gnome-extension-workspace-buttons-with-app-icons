@@ -36,7 +36,6 @@ const extensionSettingsInfoObj = {
     "wsb-middle-click-ignores-clicked-workspace": "b",
     "wsb-right-click-ignores-clicked-workspace": "b",
     "wsb-left-click-activates-unfocused-app": "b",
-    "wsb-generate-window-icon-timeout": "i",
     "window-switcher-popup-show-windows-from-all-monitors": "b"
 };
 const mutterSettingsInfoObj = {
