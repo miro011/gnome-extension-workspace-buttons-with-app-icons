@@ -2,6 +2,7 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as AltTab from "resource:///org/gnome/shell/ui/altTab.js";
 import Gio from "gi://Gio";
+import * as GnomeConfig from 'resource:///org/gnome/shell/misc/config.js';
 
 import Renderer from "./renderer.js";
 import Settings from "./settings.js";
@@ -45,6 +46,8 @@ const mutterSettingsInfoObj = {
 
 export default class WorkspaceIndicatorExtension extends Extension {
     enable() {
+        [this.gnomeMajorVersion, this.gnomeMinorVersion] = GnomeConfig.PACKAGE_VERSION.split('.').map(Number);
+
         Main.panel.statusArea['activities']?.hide();
 
         this.originalGetWindowListFunc = AltTab.WindowSwitcherPopup.prototype._getWindowList; // Override _getWindowList to only get windows from current monitor
@@ -58,6 +61,8 @@ export default class WorkspaceIndicatorExtension extends Extension {
     }
 
     disable() {
+        this.gnomeMajorVersion = null;
+        this.gnomeMinorVersion = null;
         this.renderer.destroy();
         this.renderer = null;
         this.extSettings.destroy();

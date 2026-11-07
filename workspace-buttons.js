@@ -331,7 +331,7 @@ export default class WorkspaceButtons {
         return output;
     }
 
-    _show_custom_right_click_window_switcher() {
+    /*_show_custom_right_click_window_switcher() {
         let windowSwitcher = new AltTab.WindowSwitcherPopup();
         windowSwitcher._resetNoModsTimeout = () => {}; // Disable the timeout
     
@@ -350,5 +350,57 @@ export default class WorkspaceButtons {
         };
     
         windowSwitcher.show(0, 0, 0);
-    } 
+    }*/
+
+    _show_custom_right_click_window_switcher() {
+        let windowSwitcher = new AltTab.WindowSwitcherPopup();
+        windowSwitcher._resetNoModsTimeout = () => {}; // Disable the timeout
+
+        // === PATCH FOR GNOME 51 MOUSE WHEEL SCROLLING ===
+        // Connect to the scroll event of the main actor container
+        if (this.rendererInst.extensionInst.gnomeMajorVersion >= 51) {
+            //log("*************************************** VERSION CORRECT");
+            
+            // Connect directly to windowSwitcher, as it is now an actor subclass
+            if (windowSwitcher && typeof windowSwitcher.connect === 'function') {
+                //log("*************************************** BIND SCROLL");
+                windowSwitcher.connect('scroll-event', (actor, event) => {
+                    const direction = event.get_scroll_direction();
+                    
+                    if (direction === Clutter.ScrollDirection.UP) {
+                        // Move selection to the left/previous item
+                        let prevIndex = windowSwitcher._selectedIndex - 1;
+                        if (prevIndex < 0) prevIndex = windowSwitcher._items.length - 1;
+                        windowSwitcher._select(prevIndex);
+                        return Clutter.EVENT_STOP;
+                    } else if (direction === Clutter.ScrollDirection.DOWN) {
+                        // Move selection to the right/next item
+                        let nextIndex = windowSwitcher._selectedIndex + 1;
+                        if (nextIndex >= windowSwitcher._items.length) nextIndex = 0;
+                        windowSwitcher._select(nextIndex);
+                        return Clutter.EVENT_STOP;
+                    }
+                    return Clutter.EVENT_PROPAGATE;
+                });
+            }
+        }
+        
+        // ===============================================
+
+        // Override the destroy method to handle manual closure
+        let originalDestroy = windowSwitcher.destroy.bind(windowSwitcher);
+        windowSwitcher.destroy = () => {
+            // Get the currently highlighted window
+            if (windowSwitcher._items[windowSwitcher._selectedIndex]) {
+                let selectedWindow = windowSwitcher._items[windowSwitcher._selectedIndex].window;
+                selectedWindow.get_compositor_private().grab_key_focus(); 
+                selectedWindow.activate(global.get_current_time());
+            }
+
+            // Call the original destroy
+            originalDestroy();
+        };
+
+        windowSwitcher.show(0, 0, 0);
+    }
 }
