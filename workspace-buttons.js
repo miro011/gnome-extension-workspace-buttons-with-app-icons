@@ -35,7 +35,7 @@ export default class WorkspaceButtons {
     // CONTAINER
     
     add_container() {
-        let containerElem = new St.BoxLayout({style_class: "wsb-container-wrapper", vertical: false, reactive: true, track_hover: true});
+        let containerElem = new St.BoxLayout({style_class: "wsb-container-wrapper", reactive: true, track_hover: true});
         this.containersArr.push(containerElem);
 
         containerElem.connect("scroll-event", (actor, event) => {

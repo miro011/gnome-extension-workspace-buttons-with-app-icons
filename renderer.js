@@ -11,7 +11,10 @@ import * as globals from "./globals.js";
 export default class Renderer {
     constructor(extensionInst) {
         this.extensionInst = extensionInst;
-        this._init();
+        this._init().catch(err => {
+            console.error(`[Workspace Buttons] Renderer async _init failed: ${err}`);
+            console.error(err.stack);
+        });
     }
 
     async _init() {
@@ -283,6 +286,7 @@ export default class Renderer {
             }
             if (!success) {
                 this.destroy(false, false);
+                this._init();
             }
 
             for (let windowObj of global.display.get_tab_list(Meta.TabList.NORMAL, global.workspace_manager.get_workspace_by_index(newWindowWsIndex))) {
