@@ -175,23 +175,26 @@ export default class Renderer {
     _enable_settings_events() {
         let id;
 
-        id = this.extensionInst.mutterSettings.realTimeObj.connect('changed::workspaces-only-on-primary', () => {
+        id = this.extensionInst.mutterSettings.realTimeObj.connect('changed::workspaces-only-on-primary', async () => {
             this.destroy(false);
+            await globals.delay(1000);
             this._init();
         });
         this.extensionInst.mutterSettings.add_event_id(id);
 
-        id = this.extensionInst.mutterSettings.realTimeObj.connect('changed::dynamic-workspaces', () => {
+        id = this.extensionInst.mutterSettings.realTimeObj.connect('changed::dynamic-workspaces', async () => {
             this.destroy(false);
+            await globals.delay(1000);
             this._init();
         });
         this.extensionInst.mutterSettings.add_event_id(id);
     }
 
     _enable_gnome_events() {
-        this.gnomeMainEventIdsObj["layoutManager"].push(Main.layoutManager.connect('monitors-changed', () => {
+        this.gnomeMainEventIdsObj["layoutManager"].push(Main.layoutManager.connect('monitors-changed', async () => {
             //log("monitors-changed");
             this.destroy(false, false); // don't wanna change back to the old (saved) primary. When monitors are changed the primary monitor (if changed) is reassigned on its own
+            await globals.delay(1000);
             this._init();
         }));
 
